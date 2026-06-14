@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Daily Brief Automation</title>
+<title>Daily Brief & Market Update</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -34,6 +34,18 @@
     font-size: .8rem;
     margin-bottom: 1rem;
   }
+  .hero .github-link {
+    display: inline-block;
+    margin-top: 1.25rem;
+    padding: .55rem 1.25rem;
+    background: rgba(255,255,255,.12);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: .9rem;
+    transition: background .2s;
+  }
+  .hero .github-link:hover { background: rgba(255,255,255,.22); }
 
   /* Cards */
   .card {
@@ -137,6 +149,7 @@
     font-size: .85rem;
     padding: 2rem 0 1rem;
   }
+  .footer a { color: #0f3460; }
 
   /* Responsive */
   @media (max-width: 540px) {
@@ -153,18 +166,20 @@
   <div class="hero">
     <div class="hero-badge">&#9679; Fully Automated &middot; 100% Free</div>
     <h1>Your Daily Brief, Delivered</h1>
-    <p>Weather, a motivational quote, and news headlines in your inbox every afternoon &mdash; no apps, no subscriptions, no effort.</p>
+    <p>Weather, a quote, news headlines, crypto prices, and PH stock data &mdash; all in one email, every afternoon.</p>
+    <a class="github-link" href="https://github.com/julius-darang/automation" target="_blank">&#128279; View on GitHub</a>
   </div>
 
   <!-- Why -->
   <div class="card">
     <h2>&#128200; Why Bother?</h2>
-    <p>Every morning, most of us check the same things: the weather, the news, something to start the day right. But that adds up to a dozen taps across five apps before 9 AM.</p>
-    <p>This automation <strong>condenses all of that into a single email</strong> that arrives automatically at the same time every day. No notifications, no doomscrolling, no decisions. Just the three things you actually need:</p>
+    <p>Every day, most of us check the same things: weather, news, crypto, stocks. That adds up to a dozen taps across five apps before lunch.</p>
+    <p>This automation <strong>condenses all of that into a single email</strong> that arrives automatically at the same time every day. No notifications, no doomscrolling, no decisions. Just the information you actually need:</p>
     <ul>
       <li><strong>&#127782; Weather</strong> &mdash; Should I bring an umbrella today?</li>
       <li><strong>&#128172; Quote</strong> &mdash; A small dose of perspective.</li>
       <li><strong>&#128250; Headlines</strong> &mdash; What's happening in the world.</li>
+      <li><strong>&#128176; Crypto & Stocks</strong> &mdash; How are my investments doing?</li>
     </ul>
     <p style="margin-top:.75rem;">It's <strong>five minutes</strong> to set up and then you never think about it again. It just shows up.</p>
   </div>
@@ -191,9 +206,22 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
 &#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;
 
 &#128250;  HEADLINES
-  &bull; Royal Marines board Russian shadow fleet oil tanker in English Channel
-  &bull; Watch: MOD video shows Russian shadow fleet tanker interception
-  &bull; Why Haiti v Scotland was antidote to the ills of world football</div>
+  &bull; Royal Marines board Russian shadow fleet oil tanker
+  &bull; Watch: MOD video shows Russian shadow fleet interception
+  &bull; Why Haiti v Scotland was antidote to the ills of football
+
+&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;
+
+&#128200;  MARKET UPDATE
+
+&#129499;  CRYPTO
+  BTC  &bull;  $67,890.12  (&#9650;2.3%)
+  ETH  &bull;  $3,456.78  (&#9660;1.2%)
+  SOL  &bull;  $145.67  (&#9650;0.8%)
+
+&#127477;&#127469;  PSE STOCKS
+  BDO  &bull;  &#8369;145.50  (&#9650;0.5%)
+  SM  &bull;  &#8369;890.00  (&#9660;0.3%)</div>
   </div>
 
   <!-- How it works (simple) -->
@@ -234,8 +262,10 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
       <tr><td>&#127782; Weather</td><td><a href="https://open-meteo.com/">Open-Meteo</a></td><td>No</td></tr>
       <tr><td>&#128172; Quote</td><td><a href="https://zenquotes.io/">ZenQuotes</a></td><td>No</td></tr>
       <tr><td>&#128250; News</td><td><a href="https://feeds.bbci.co.uk/news/rss.xml">BBC RSS</a></td><td>No</td></tr>
+      <tr><td>&#128176; Crypto</td><td><a href="https://pypi.org/project/yfinance/">yfinance</a></td><td>No</td></tr>
+      <tr><td>&#127477;&#127469; PH Stocks</td><td><a href="https://twelvedata.com/">Twelve Data</a></td><td>Free key</td></tr>
     </table>
-    <p style="margin-top:.75rem;font-size:.9rem;color:#666;">All three sources are free, require no registration, and have been reliable for years.</p>
+    <p style="margin-top:.75rem;font-size:.9rem;color:#666;">All sources are free. Only PH stocks require a (free) API key from Twelve Data.</p>
   </div>
 
   <!-- Setup steps -->
@@ -248,18 +278,19 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
         <span class="step-num">1</span>
         <div>
           <strong>Generate a Gmail App Password</strong>
-          <p style="font-size:.9rem;margin-top:.2rem;">Go to <a href="https://myaccount.google.com/apppasswords">Google App Passwords</a>, select <strong>Mail</strong>, click <strong>Generate</strong>, and copy the 16-character password. (Requires 2-Step Verification to be enabled on your Google account.)</p>
+          <p style="font-size:.9rem;margin-top:.2rem;">Go to <a href="https://myaccount.google.com/apppasswords">Google App Passwords</a>, select <strong>Mail</strong>, click <strong>Generate</strong>, and copy the 16-character password. (Requires 2-Step Verification enabled on your Google account.)</p>
         </div>
       </li>
       <li>
         <span class="step-num">2</span>
         <div>
-          <strong>Add 3 secrets to your GitHub repo</strong>
+          <strong>Add secrets to your GitHub repo</strong>
           <p style="font-size:.9rem;margin-top:.2rem;">In your repository on GitHub, go to <strong>Settings &#8594; Secrets and variables &#8594; Actions</strong> and add:</p>
           <table style="font-size:.85rem;margin-top:.4rem;">
             <tr><td><code>SENDER_EMAIL</code></td><td>Your Gmail address</td></tr>
             <tr><td><code>SENDER_PASSWORD</code></td><td>The app password from step 1</td></tr>
             <tr><td><code>RECEIVER_EMAIL</code></td><td>Where you want the email sent</td></tr>
+            <tr><td><code>TWELVEDATA_API_KEY</code></td><td>(Optional) <a href="https://twelvedata.com/">Twelve Data</a> key for PH stocks</td></tr>
           </table>
         </div>
       </li>
@@ -267,7 +298,7 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
         <span class="step-num">3</span>
         <div>
           <strong>Push the code to GitHub</strong>
-          <p style="font-size:.9rem;margin-top:.2rem;">Upload <code>send_email.py</code> and <code>.github/workflows/daily-email.yml</code> to your repository. The workflow activates automatically and sends your first email at 2PM PH time. You can also trigger it manually from the Actions tab.</p>
+          <p style="font-size:.9rem;margin-top:.2rem;">Push the repo. The workflow activates automatically and sends your first email at 2PM PH time. You can also trigger it manually from the Actions tab.</p>
         </div>
       </li>
     </ol>
@@ -308,16 +339,16 @@ python send_email.py --local     <span class="comment"># Send using .env file</s
   <div class="card">
     <h2>&#128218; Tech Stack</h2>
     <ul>
-      <li><strong>Language:</strong> Python 3.9+ (standard library only, zero dependencies)</li>
+      <li><strong>Language:</strong> Python 3.9+</li>
       <li><strong>Scheduling:</strong> GitHub Actions cron (free tier)</li>
       <li><strong>Email delivery:</strong> Gmail SMTP via <code>smtplib</code></li>
-      <li><strong>APIs:</strong> Open-Meteo, ZenQuotes, BBC RSS &mdash; all free, no keys</li>
+      <li><strong>APIs:</strong> Open-Meteo, ZenQuotes, BBC RSS, yfinance, Twelve Data</li>
     </ul>
-    <p style="margin-top:.75rem;font-size:.9rem;color:#666;">The entire project is a single Python file with <strong>zero pip packages</strong>. It uses only modules built into Python: <code>smtplib</code>, <code>urllib</code>, <code>json</code>, <code>xml.etree</code>, <code>zoneinfo</code>, <code>argparse</code>.</p>
+    <p style="margin-top:.75rem;font-size:.9rem;color:#666;">Source code available on <a href="https://github.com/julius-darang/automation">GitHub</a>.</p>
   </div>
 
   <div class="footer">
-    Built with &#9829; for personal automation &middot; <a href="https://github.com/anomalyco/opencode">OpenCode</a>
+    Built with &#9829; for personal automation
   </div>
 
 </div>
