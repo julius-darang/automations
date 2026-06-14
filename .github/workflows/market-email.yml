@@ -1,0 +1,37 @@
+name: Market Alert Email
+
+on:
+  schedule:
+    - cron: '30 4 * * 1-5'  # 12:30 PM PH (UTC+8), Mon–Fri
+  workflow_dispatch:
+
+jobs:
+  send-market-email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send market alert
+        run: python market_alert.py
+        env:
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+          RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          curl -s -H "Title: Market Alert Failed" \
+               -H "Priority: high" \
+               -H "Tags: warning" \
+               -d "The market alert automation failed at $(date -u). Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+               https://ntfy.sh/daily-brief-julius
