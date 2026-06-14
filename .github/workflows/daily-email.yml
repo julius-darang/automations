@@ -1,4 +1,4 @@
-name: Daily Email at 2PM PH Time
+name: Daily Brief & Market Update
 
 on:
   schedule:
@@ -25,6 +25,7 @@ jobs:
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
           RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
 
       - name: Notify on failure
         if: failure()

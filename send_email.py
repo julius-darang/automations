@@ -13,12 +13,35 @@ from email.mime.text import MIMEText
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import yfinance as yf
+
+
+CRYPTO_SYMBOLS = [
+    ("BTC-USD", "BTC"),
+    ("ETH-USD", "ETH"),
+    ("SOL-USD", "SOL"),
+]
+
+STOCK_SYMBOLS = [
+    ("BDO", "BDO"),
+    ("SM", "SM"),
+    ("TEL", "TEL"),
+    ("ALI", "ALI"),
+    ("JFC", "JFC"),
+]
+
+CRYPTO_ORDER = ["BTC", "ETH", "SOL"]
+STOCK_ORDER = ["BDO", "SM", "TEL", "ALI", "JFC"]
+
+TWELVEDATA_BASE = "https://api.twelvedata.com"
+
 
 @dataclass(frozen=True)
 class Config:
     sender_email: str
     sender_password: str
     receiver_email: str
+    twelvedata_api_key: str = ""
     timezone: str = "Asia/Manila"
     lat: float = 11.6083
     lon: float = 125.4358
@@ -48,6 +71,7 @@ def load_config() -> Config:
         sender_email=os.environ["SENDER_EMAIL"],
         sender_password=os.environ["SENDER_PASSWORD"],
         receiver_email=os.environ["RECEIVER_EMAIL"],
+        twelvedata_api_key=os.environ.get("TWELVEDATA_API_KEY", ""),
     )
 
 
@@ -140,7 +164,75 @@ def get_news(cfg: Config) -> str | None:
         return None
 
 
-def build_body(cfg: Config, day_str: str, date_str: str, weather: str, quote: str, news: str | None) -> str:
+def get_crypto_prices() -> dict:
+    prices = {}
+    for symbol, display_name in CRYPTO_SYMBOLS:
+        try:
+            t = yf.Ticker(symbol)
+            hist = t.history(period="5d")
+            if hist.empty:
+                print(f"  ⚠ No data for {display_name}")
+                continue
+            price = hist["Close"].iloc[-1]
+            change_pct = 0.0
+            if len(hist) >= 2:
+                prev_close = hist["Close"].iloc[-2]
+                change_pct = ((price - prev_close) / prev_close) * 100
+            prices[display_name] = (price, change_pct)
+        except Exception as e:
+            print(f"  ⚠ Failed to fetch {display_name}: {e}")
+    return prices
+
+
+def get_stock_prices(cfg: Config) -> dict:
+    prices = {}
+    if not cfg.twelvedata_api_key:
+        print("  ⚠ TWELVEDATA_API_KEY not set, skipping PH stocks")
+        return prices
+    for symbol, display_name in STOCK_SYMBOLS:
+        try:
+            url = f"{TWELVEDATA_BASE}/quote?symbol={symbol}&exchange=PSE&apikey={cfg.twelvedata_api_key}"
+            data = fetch_json(url, cfg.max_retries, cfg.retry_delay)
+            if "status" in data and data["status"] == "error":
+                raise Exception(data.get("message", "unknown error"))
+            price = float(data["close"])
+            change_pct = float(data.get("percent_change", 0))
+            prices[display_name] = (price, change_pct)
+        except Exception as e:
+            print(f"  ⚠ Failed to fetch {display_name}: {e}")
+    return prices
+
+
+def build_market_section(crypto: dict, stocks: dict) -> str:
+    parts = [
+        "",
+        "━━━━━━━━━━━━━━━━━━━━━━━━",
+        "📈  MARKET UPDATE",
+        "━━━━━━━━━━━━━━━━━━━━━━━━",
+    ]
+
+    if crypto:
+        parts += ["", "🪙  CRYPTO"]
+        for name in CRYPTO_ORDER:
+            if name not in crypto:
+                continue
+            price, change = crypto[name]
+            arrow = "▲" if change >= 0 else "▼"
+            parts.append(f"  {name}  •  ${price:,.2f}  ({arrow}{abs(change):.1f}%)")
+
+    if stocks:
+        parts += ["", "━━━━━━━━━━━━━━━━━━━━━━━━", "", "🇵🇭  PSE STOCKS"]
+        for name in STOCK_ORDER:
+            if name not in stocks:
+                continue
+            price, change = stocks[name]
+            arrow = "▲" if change >= 0 else "▼"
+            parts.append(f"  {name}  •  ₱{price:,.2f}  ({arrow}{abs(change):.1f}%)")
+
+    return "\n".join(parts)
+
+
+def build_body(cfg: Config, day_str: str, date_str: str, weather: str, quote: str, news: str | None, market: str = "") -> str:
     parts = [
         "Good afternoon!",
         "",
@@ -164,6 +256,12 @@ def build_body(cfg: Config, day_str: str, date_str: str, weather: str, quote: st
             "",
             "📰  HEADLINES",
             news,
+        ]
+
+    if market:
+        parts += [
+            "",
+            market,
         ]
 
     parts += [
@@ -214,8 +312,25 @@ def main() -> None:
     weather = get_weather(cfg)
     quote   = get_quote(cfg)
     news    = get_news(cfg)
-    subject = f"Daily Brief — {day_str}, {date_str}"
-    body    = build_body(cfg, day_str, date_str, weather, quote, news)
+
+    print("Fetching crypto prices...")
+    crypto = get_crypto_prices()
+    print(f"  fetched {len(crypto)}")
+    for name, (price, change) in crypto.items():
+        arrow = "▲" if change >= 0 else "▼"
+        print(f"    {name}: {price:.2f} ({arrow}{abs(change):.1f}%)")
+
+    print("Fetching PH stock prices...")
+    stocks = get_stock_prices(cfg)
+    print(f"  fetched {len(stocks)}")
+    for name, (price, change) in stocks.items():
+        arrow = "▲" if change >= 0 else "▼"
+        print(f"    {name}: {price:.2f} ({arrow}{abs(change):.1f}%)")
+
+    market = build_market_section(crypto, stocks)
+
+    subject = f"Daily Brief & Market Update — {day_str}, {date_str}"
+    body    = build_body(cfg, day_str, date_str, weather, quote, news, market)
 
     print(f"🌤  {weather}")
     print(f"💬  {quote[:60]}...")
