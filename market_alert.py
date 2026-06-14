@@ -22,11 +22,11 @@ CRYPTO_SYMBOLS = [
 ]
 
 STOCK_SYMBOLS = [
-    ("BDO.PS", "BDO"),
-    ("SM.PS", "SM"),
-    ("TEL.PS", "TEL"),
-    ("ALI.PS", "ALI"),
-    ("JFC.PS", "JFC"),
+    ("BDO", "BDO"),
+    ("SM", "SM"),
+    ("TEL", "TEL"),
+    ("ALI", "ALI"),
+    ("JFC", "JFC"),
 ]
 
 CRYPTO_ORDER = ["BTC", "ETH", "SOL"]
@@ -111,7 +111,7 @@ def get_stock_prices(cfg: Config) -> dict:
         return prices
     for symbol, display_name in STOCK_SYMBOLS:
         try:
-            url = f"{TWELVEDATA_BASE}/quote?symbol={symbol}&apikey={cfg.twelvedata_api_key}"
+            url = f"{TWELVEDATA_BASE}/quote?symbol={symbol}&exchange=PSE&apikey={cfg.twelvedata_api_key}"
             data = get_retry_json(url)
             if "status" in data and data["status"] == "error":
                 raise Exception(data.get("message", "unknown error"))
