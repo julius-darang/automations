@@ -56,7 +56,8 @@ automations/
 ├── .github/workflows/daily-email.yml   # GitHub Actions schedule
 ├── .gitignore
 ├── requirements.txt                    # yfinance
-├── send_email.py                       # Core automation script
+├── daily_updates.py                    # Canonical daily brief script
+├── recipients.txt                      # Local ignored recipient list
 ├── index.html                          # Landing page (GitHub Pages)
 └── README.md
 ```
@@ -84,8 +85,10 @@ In your GitHub repository, go to **Settings → Secrets and variables → Action
 |--------|-------|
 | `SENDER_EMAIL` | Your Gmail address |
 | `SENDER_PASSWORD` | The 16-character app password |
-| `RECEIVER_EMAIL` | Where you want the email delivered |
+| `RECIPIENT_EMAILS` | Preferred: one recipient email address per line |
+| `RECEIVER_EMAIL` | Backward-compatible single-recipient fallback |
 | `TWELVEDATA_API_KEY` | (Optional) Twelve Data API key for PH stocks |
+| `NTFY_TOPIC` | Random ntfy.sh topic for failure notifications |
 
 ### 4. Enable the Workflow
 
@@ -97,7 +100,7 @@ Push the repo to GitHub. The workflow is already configured to run daily at 2PM 
 
 ```bash
 pip install -r requirements.txt
-python send_email.py --dry-run
+python daily_updates.py --dry-run
 ```
 
 This fetches live data and prints the email to your terminal.
@@ -116,29 +119,41 @@ TWELVEDATA_API_KEY=your-twelve-data-key
 Then run:
 
 ```bash
-python send_email.py --local
+python daily_updates.py --local
 ```
 
 This loads variables from `.env` and sends the email.
 
+### Multiple recipients
+
+For local runs, create `recipients.txt` in the repository directory and enter one email address per line:
+
+```text
+# Blank lines and lines beginning with # are ignored.
+first@example.com
+second@example.com
+```
+
+The file is gitignored and preferred when it contains at least one address. For GitHub Actions, put the same newline-separated list in the `RECIPIENT_EMAILS` repository secret; the workflow recreates the ignored file before sending. `RECEIVER_EMAIL` remains available as a single-recipient fallback.
+
 ### Change city / coordinates
 
-Edit the default values in the `Config` dataclass at the top of `send_email.py`:
+The default location is Borongan City, Eastern Samar. Override it with environment variables (in GitHub Actions, set them in the workflow; locally, add them to `.env`):
 
-```python
-@dataclass(frozen=True)
-class Config:
-    ...
-    lat: float = 11.6083       # Borongan City latitude
-    lon: float = 125.4358      # Borongan City longitude
-    city: str = "Borongan City, Eastern Samar"
+```bash
+CITY="Borongan City, Eastern Samar"
+LAT=11.6083
+LON=125.4358
+TIMEZONE=Asia/Manila
 ```
+
+`LAT` and `LON` are used for the Open-Meteo weather request; `TIMEZONE` controls the date and time shown in the email.
 
 ## How It Works
 
 ```
 ┌─────────────┐    ┌──────────────────┐    ┌──────────────┐
-│  GitHub      │    │  send_email.py   │    │  External    │
+│  GitHub      │    │  daily_updates.py│    │  External    │
 │  Actions     │───▶│                  │───▶│  APIs        │
 │  (cron:      │    │  1. Load config  │    │              │
 │   2PM PH)    │    │  2. Fetch data   │    │  • Open-Meteo│
@@ -155,14 +170,14 @@ class Config:
 ### Error Handling
 
 - **API failures**: Each external API call retries up to 2 times with a 3-second delay before falling back to an error message in the email.
-- **SMTP failures**: If sending fails, the email is saved to a local file (`email_fallback_YYYYMMDD_HHMMSS.txt`) instead of being lost.
-- **Workflow failures**: If the entire GitHub Actions run fails, a push notification is sent via [ntfy.sh](https://ntfy.sh/daily-brief-julius).
+- **SMTP failures**: If sending fails, the email is saved to `email_fallback_YYYYMMDD_HHMMSS.txt`, the workflow fails, and GitHub Actions retains the fallback as a 30-day artifact.
+- **Workflow failures**: If the GitHub Actions run fails, a push notification is sent via [ntfy.sh](https://ntfy.sh/) using the private `NTFY_TOPIC` secret.
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.11
 - [yfinance](https://pypi.org/project/yfinance/) (for crypto prices)
 
 ## Failure Notifications
 
-On workflow failure, a push notification is sent to **ntfy.sh/daily-brief-julius**. Subscribe on your phone via the [ntfy app](https://ntfy.sh/) or use any ntfy-compatible client.
+On workflow failure, a push notification is sent to the topic stored in `NTFY_TOPIC`. Subscribe on your phone via the [ntfy app](https://ntfy.sh/) or use any ntfy-compatible client.

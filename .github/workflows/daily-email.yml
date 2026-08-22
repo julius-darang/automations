@@ -2,7 +2,7 @@ name: Daily Brief & Market Update
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # 6am UTC = 2pm PH (UTC+8)
+    - cron: '0 6 * * *'  # 6am UTC = 2pm PH (UTC+8)
   workflow_dispatch:
 
 jobs:
@@ -19,19 +19,47 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Prepare recipient list
+        env:
+          RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
+        run: |
+          if [ -n "$RECIPIENT_EMAILS" ]; then
+            printf '%s\n' "$RECIPIENT_EMAILS" > recipients.txt
+          fi
+
       - name: Send email
-        run: python send_email.py
+        run: python daily_updates.py
         env:
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
           RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
           TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+          CITY: "Borongan City, Eastern Samar"
+          LAT: "11.6083"
+          LON: "125.4358"
+          TIMEZONE: "Asia/Manila"
+
+      - name: Upload fallback email
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: email-fallback-${{ github.run_id }}
+          path: "email_fallback_*.txt"
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: Notify on failure
         if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
-          curl -s -H "Title: Daily Brief Failed" \
+          if [ -z "$NTFY_TOPIC" ]; then
+            echo "::warning::NTFY_TOPIC is not configured; skipping failure notification."
+            exit 0
+          fi
+          curl --fail --silent --show-error \
+               -H "Title: Daily Brief Failed" \
                -H "Priority: high" \
                -H "Tags: warning" \
                -d "The daily brief automation failed at $(date -u). Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-               https://ntfy.sh/daily-brief-julius
+               "https://ntfy.sh/${NTFY_TOPIC}"

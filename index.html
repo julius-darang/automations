@@ -289,8 +289,10 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
           <table style="font-size:.85rem;margin-top:.4rem;">
             <tr><td><code>SENDER_EMAIL</code></td><td>Your Gmail address</td></tr>
             <tr><td><code>SENDER_PASSWORD</code></td><td>The app password from step 1</td></tr>
-            <tr><td><code>RECEIVER_EMAIL</code></td><td>Where you want the email sent</td></tr>
+            <tr><td><code>RECIPIENT_EMAILS</code></td><td>Preferred: one recipient email address per line</td></tr>
+            <tr><td><code>RECEIVER_EMAIL</code></td><td>Single-recipient fallback</td></tr>
             <tr><td><code>TWELVEDATA_API_KEY</code></td><td>(Optional) <a href="https://twelvedata.com/">Twelve Data</a> key for PH stocks</td></tr>
+            <tr><td><code>NTFY_TOPIC</code></td><td>A random <a href="https://ntfy.sh/">ntfy.sh</a> topic for failure notifications</td></tr>
           </table>
         </div>
       </li>
@@ -313,7 +315,7 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
     <h2>&#128737;&#65039; What if Something Breaks?</h2>
     <ul>
       <li>If an API is down, the email still sends &mdash; that section just shows a friendly "unavailable" message.</li>
-      <li>If the email fails to send, the content is saved to a fallback file in the repo so nothing is lost.</li>
+      <li>If the email fails to send, the content is saved to a fallback file and uploaded to GitHub Actions as a 30-day artifact.</li>
       <li>If the entire workflow fails, a push notification is sent via <a href="https://ntfy.sh/">ntfy.sh</a> so you know immediately.</li>
     </ul>
   </div>
@@ -321,25 +323,23 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
   <!-- Customize -->
   <div class="card">
     <h2>&#127912; Make It Yours</h2>
-    <p>Everything is configurable by editing the <code>Config</code> block at the top of <code>send_email.py</code>:</p>
+    <p>Everything is configurable with environment variables used by <code>daily_updates.py</code>. For local runs, put one address per line in the gitignored <code>recipients.txt</code> file; GitHub Actions uses the newline-separated <code>RECIPIENT_EMAILS</code> secret to recreate it:</p>
     <pre><span class="comment"># Change the city and coordinates:</span>
-lat: float = 11.6083       <span class="comment"># Borongan City</span>
-lon: float = 125.4358
-city: str = "Borongan City, Eastern Samar"
-
-<span class="comment"># Change the timezone:</span>
-timezone: str = "Asia/Manila"
+CITY="Borongan City, Eastern Samar"
+LAT=11.6083
+LON=125.4358
+TIMEZONE=Asia/Manila
 
 <span class="comment"># Or run locally to test:</span>
-python send_email.py --dry-run   <span class="comment"># Preview the email</span>
-python send_email.py --local     <span class="comment"># Send using .env file</span></pre>
+python daily_updates.py --dry-run   <span class="comment"># Preview the email</span>
+python daily_updates.py --local     <span class="comment"># Send using .env file</span></pre>
   </div>
 
   <!-- Tech details -->
   <div class="card">
     <h2>&#128218; Tech Stack</h2>
     <ul>
-      <li><strong>Language:</strong> Python 3.9+</li>
+      <li><strong>Language:</strong> Python 3.11</li>
       <li><strong>Scheduling:</strong> GitHub Actions cron (free tier)</li>
       <li><strong>Email delivery:</strong> Gmail SMTP via <code>smtplib</code></li>
       <li><strong>APIs:</strong> Open-Meteo, ZenQuotes, BBC RSS, yfinance, Twelve Data</li>
