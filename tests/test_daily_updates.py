@@ -34,8 +34,11 @@ class DailyUpdatesTests(unittest.TestCase):
             "LON": "123.45",
             "TIMEZONE": "UTC",
         }
-        with patch.dict(os.environ, environment, clear=True):
-            config = daily_updates.load_config(require_credentials=False)
+        with tempfile.TemporaryDirectory() as directory:
+            missing_file = Path(directory) / "recipients.txt"
+            with patch.object(daily_updates, "RECIPIENTS_FILE", missing_file):
+                with patch.dict(os.environ, environment, clear=True):
+                    config = daily_updates.load_config(require_credentials=False)
 
         self.assertEqual(config.city, "Test City")
         self.assertEqual(config.lat, 12.34)
@@ -131,6 +134,57 @@ class DailyUpdatesTests(unittest.TestCase):
         self.assertIn("Headline three", result)
         self.assertNotIn("Headline four", result)
 
+    def test_get_ai_news_limits_items_and_includes_source_and_link(self):
+        xml = """\
+        <rss><channel>
+          <item>
+            <title>AI headline one &amp; more</title>
+            <link>https://example.com/one</link>
+            <source>Example News</source>
+          </item>
+          <item>
+            <title>AI headline two</title>
+            <link>https://example.com/two</link>
+            <source>Second News</source>
+          </item>
+          <item>
+            <title>AI headline one &amp; more</title>
+            <link>https://example.com/duplicate</link>
+            <source>Duplicate News</source>
+          </item>
+          <item>
+            <title>AI headline three</title>
+            <link>https://example.com/three</link>
+            <source>Third News</source>
+          </item>
+          <item>
+            <title>AI headline four</title>
+            <link>https://example.com/four</link>
+            <source>Fourth News</source>
+          </item>
+        </channel></rss>
+        """
+        with patch.object(daily_updates, "fetch_text", return_value=xml) as fetch:
+            result = daily_updates.get_ai_news(self.make_config())
+
+        self.assertIsNotNone(result)
+        self.assertIn("AI headline one & more", result)
+        self.assertIn("Source: Example News", result)
+        self.assertIn("https://example.com/three", result)
+        self.assertNotIn("duplicate", result)
+        self.assertNotIn("AI headline four", result)
+        fetch.assert_called_once_with(
+            daily_updates.AI_NEWS_FEED_URL,
+            0,
+            0,
+        )
+
+    def test_get_ai_news_failure_is_nonfatal(self):
+        with patch.object(daily_updates, "fetch_text", side_effect=RuntimeError("offline")):
+            result = daily_updates.get_ai_news(self.make_config())
+
+        self.assertIsNone(result)
+
     def test_build_body_contains_brief_and_market_sections(self):
         config = self.make_config()
         market = daily_updates.build_market_section(
@@ -144,11 +198,14 @@ class DailyUpdatesTests(unittest.TestCase):
             '"Keep going"\n— Author',
             "\n  • Headline one",
             market,
+            "  • AI headline one\n    Source: Example News\n    https://example.com/one",
         )
 
         self.assertIn("WEATHER — Borongan City, Eastern Samar", body)
         self.assertIn("QUOTE OF THE DAY", body)
         self.assertIn("HEADLINES", body)
+        self.assertIn("AI NEWS", body)
+        self.assertIn("https://example.com/one", body)
         self.assertIn("BTC", body)
         self.assertIn("BDO", body)
 
@@ -176,6 +233,7 @@ class DailyUpdatesTests(unittest.TestCase):
                  patch.object(daily_updates, "get_weather", return_value="Weather"), \
                  patch.object(daily_updates, "get_quote", return_value="Quote"), \
                  patch.object(daily_updates, "get_news", return_value=None), \
+                 patch.object(daily_updates, "get_ai_news", return_value=None), \
                  patch.object(daily_updates, "get_crypto_prices", return_value={}), \
                  patch.object(daily_updates, "get_stock_prices", return_value={}), \
                  patch.object(daily_updates, "send_email", return_value=False):
@@ -192,6 +250,7 @@ class DailyUpdatesTests(unittest.TestCase):
                      patch.object(daily_updates, "get_weather", return_value="Weather"), \
                      patch.object(daily_updates, "get_quote", return_value="Quote"), \
                      patch.object(daily_updates, "get_news", return_value=None), \
+                     patch.object(daily_updates, "get_ai_news", return_value=None), \
                      patch.object(daily_updates, "get_crypto_prices", return_value={}), \
                      patch.object(daily_updates, "get_stock_prices", return_value={}), \
                      patch.object(daily_updates, "send_email") as send:

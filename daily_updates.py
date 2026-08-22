@@ -34,6 +34,12 @@ CRYPTO_ORDER = ["BTC", "ETH", "SOL"]
 STOCK_ORDER = ["BDO", "SM", "TEL", "ALI", "JFC"]
 
 TWELVEDATA_BASE = "https://api.twelvedata.com"
+AI_NEWS_FEED_URL = (
+    "https://news.google.com/rss/search?"
+    "q=artificial+intelligence+OR+generative+AI+when%3A1d&"
+    "hl=en-US&gl=US&ceid=US%3Aen"
+)
+AI_NEWS_LIMIT = 3
 RECIPIENTS_FILE = Path(__file__).with_name("recipients.txt")
 
 
@@ -200,6 +206,37 @@ def get_news(cfg: Config) -> str | None:
         return None
 
 
+def get_ai_news(cfg: Config) -> str | None:
+    try:
+        xml_text = fetch_text(AI_NEWS_FEED_URL, cfg.max_retries, cfg.retry_delay)
+        root = ET.fromstring(xml_text)
+        blocks = []
+        seen_titles = set()
+        for item in root.findall(".//item"):
+            title = " ".join(item.findtext("title", "").split())
+            link = item.findtext("link", "").strip()
+            source = " ".join(item.findtext("source", "").split())
+            if not title or not link:
+                continue
+            title_key = title.casefold()
+            if title_key in seen_titles:
+                continue
+            seen_titles.add(title_key)
+
+            block = [f"  • {title}"]
+            if source:
+                block.append(f"    Source: {source}")
+            block.append(f"    {link}")
+            blocks.append("\n".join(block))
+            if len(blocks) == AI_NEWS_LIMIT:
+                break
+
+        return "\n\n".join(blocks) if blocks else None
+    except Exception as e:
+        print(f"  ⚠ AI news unavailable: {e}")
+        return None
+
+
 def get_crypto_prices() -> dict:
     prices = {}
     for symbol, display_name in CRYPTO_SYMBOLS:
@@ -268,7 +305,16 @@ def build_market_section(crypto: dict, stocks: dict) -> str:
     return "\n".join(parts)
 
 
-def build_body(cfg: Config, day_str: str, date_str: str, weather: str, quote: str, news: str | None, market: str = "") -> str:
+def build_body(
+    cfg: Config,
+    day_str: str,
+    date_str: str,
+    weather: str,
+    quote: str,
+    news: str | None,
+    market: str = "",
+    ai_news: str | None = None,
+) -> str:
     parts = [
         "Good afternoon!",
         "",
@@ -292,6 +338,16 @@ def build_body(cfg: Config, day_str: str, date_str: str, weather: str, quote: st
             "",
             "📰  HEADLINES",
             news,
+        ]
+
+    if ai_news:
+        parts += [
+            "",
+            "━━━━━━━━━━━━━━━━━━━━━━━━",
+            "",
+            "🤖  AI NEWS",
+            "━━━━━━━━━━━━━━━━━━━━━━━━",
+            ai_news,
         ]
 
     if market:
@@ -348,6 +404,7 @@ def main() -> None:
     weather = get_weather(cfg)
     quote   = get_quote(cfg)
     news    = get_news(cfg)
+    ai_news = get_ai_news(cfg)
 
     print("Fetching crypto prices...")
     crypto = get_crypto_prices()
@@ -366,12 +423,14 @@ def main() -> None:
     market = build_market_section(crypto, stocks)
 
     subject = f"Daily Brief & Market Update — {day_str}, {date_str}"
-    body    = build_body(cfg, day_str, date_str, weather, quote, news, market)
+    body    = build_body(cfg, day_str, date_str, weather, quote, news, market, ai_news)
 
     print(f"🌤  {weather}")
     print(f"💬  {quote[:60]}...")
     if news:
         print(f"📰  Headline: {news.split('•')[1].strip() if '•' in news else 'loaded'}")
+    if ai_news:
+        print(f"🤖  AI headline: {ai_news.split('•')[1].strip() if '•' in ai_news else 'loaded'}")
 
     if args.dry_run:
         print(f"\n{'='*60}")
