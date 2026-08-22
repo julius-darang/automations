@@ -16,7 +16,7 @@ class DailyUpdatesTests(unittest.TestCase):
         values = {
             "sender_email": "sender@example.com",
             "sender_password": "app-password",
-            "receiver_email": "receiver@example.com",
+            "recipients": ("receiver@example.com",),
             "timezone": "Asia/Manila",
             "lat": 11.6083,
             "lon": 125.4358,
@@ -42,6 +42,51 @@ class DailyUpdatesTests(unittest.TestCase):
         self.assertEqual(config.lon, 123.45)
         self.assertEqual(config.timezone, "UTC")
         self.assertEqual(config.sender_email, "")
+        self.assertEqual(config.recipients, ())
+
+    def test_parse_recipient_lines_ignores_comments_blanks_and_duplicates(self):
+        lines = [
+            "first@example.com",
+            "",
+            "# comment",
+            " second@example.com ",
+            "first@example.com",
+        ]
+
+        self.assertEqual(
+            daily_updates.parse_recipient_lines(lines),
+            ("first@example.com", "second@example.com"),
+        )
+
+    def test_load_recipients_prefers_file_over_environment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            recipient_file = Path(directory) / "recipients.txt"
+            recipient_file.write_text("file@example.com\n")
+            with patch.dict(
+                os.environ,
+                {
+                    "RECIPIENT_EMAILS": "secret@example.com",
+                    "RECEIVER_EMAIL": "legacy@example.com",
+                },
+                clear=True,
+            ):
+                recipients = daily_updates.load_recipients(recipient_file)
+
+        self.assertEqual(recipients, ("file@example.com",))
+
+    def test_load_recipients_falls_back_to_environment(self):
+        missing_file = Path(tempfile.gettempdir()) / "missing-automations-recipients.txt"
+        with patch.dict(
+            os.environ,
+            {
+                "RECIPIENT_EMAILS": "first@example.com\nsecond@example.com",
+                "RECEIVER_EMAIL": "legacy@example.com",
+            },
+            clear=True,
+        ):
+            recipients = daily_updates.load_recipients(missing_file)
+
+        self.assertEqual(recipients, ("first@example.com", "second@example.com"))
 
     def test_load_config_requires_credentials_when_sending(self):
         with patch.dict(os.environ, {}, clear=True):
@@ -140,7 +185,7 @@ class DailyUpdatesTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 1)
 
     def test_dry_run_does_not_require_or_send_with_credentials(self):
-        config = self.make_config(sender_email="", sender_password="", receiver_email="")
+        config = self.make_config(sender_email="", sender_password="", recipients=())
         with patch.dict(os.environ, {}, clear=True):
             with patch.object(sys, "argv", ["daily_updates.py", "--dry-run"]):
                 with patch.object(daily_updates, "get_date_info", return_value=("Sunday", "June 14, 2026")), \

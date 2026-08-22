@@ -4,4 +4,4 @@ __pycache__/
 .env
 email_fallback_*.txt
 .ruff_cache/
-.DS_Store
+recipients.txt

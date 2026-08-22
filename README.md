@@ -57,6 +57,7 @@ automations/
 ├── .gitignore
 ├── requirements.txt                    # yfinance
 ├── daily_updates.py                    # Canonical daily brief script
+├── recipients.txt                      # Local ignored recipient list
 ├── index.html                          # Landing page (GitHub Pages)
 └── README.md
 ```
@@ -84,7 +85,8 @@ In your GitHub repository, go to **Settings → Secrets and variables → Action
 |--------|-------|
 | `SENDER_EMAIL` | Your Gmail address |
 | `SENDER_PASSWORD` | The 16-character app password |
-| `RECEIVER_EMAIL` | Where you want the email delivered |
+| `RECIPIENT_EMAILS` | Preferred: one recipient email address per line |
+| `RECEIVER_EMAIL` | Backward-compatible single-recipient fallback |
 | `TWELVEDATA_API_KEY` | (Optional) Twelve Data API key for PH stocks |
 | `NTFY_TOPIC` | Random ntfy.sh topic for failure notifications |
 
@@ -121,6 +123,18 @@ python daily_updates.py --local
 ```
 
 This loads variables from `.env` and sends the email.
+
+### Multiple recipients
+
+For local runs, create `recipients.txt` in the repository directory and enter one email address per line:
+
+```text
+# Blank lines and lines beginning with # are ignored.
+first@example.com
+second@example.com
+```
+
+The file is gitignored and preferred when it contains at least one address. For GitHub Actions, put the same newline-separated list in the `RECIPIENT_EMAILS` repository secret; the workflow recreates the ignored file before sending. `RECEIVER_EMAIL` remains available as a single-recipient fallback.
 
 ### Change city / coordinates
 

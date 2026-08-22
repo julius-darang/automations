@@ -289,7 +289,8 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
           <table style="font-size:.85rem;margin-top:.4rem;">
             <tr><td><code>SENDER_EMAIL</code></td><td>Your Gmail address</td></tr>
             <tr><td><code>SENDER_PASSWORD</code></td><td>The app password from step 1</td></tr>
-            <tr><td><code>RECEIVER_EMAIL</code></td><td>Where you want the email sent</td></tr>
+            <tr><td><code>RECIPIENT_EMAILS</code></td><td>Preferred: one recipient email address per line</td></tr>
+            <tr><td><code>RECEIVER_EMAIL</code></td><td>Single-recipient fallback</td></tr>
             <tr><td><code>TWELVEDATA_API_KEY</code></td><td>(Optional) <a href="https://twelvedata.com/">Twelve Data</a> key for PH stocks</td></tr>
             <tr><td><code>NTFY_TOPIC</code></td><td>A random <a href="https://ntfy.sh/">ntfy.sh</a> topic for failure notifications</td></tr>
           </table>
@@ -322,7 +323,7 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
   <!-- Customize -->
   <div class="card">
     <h2>&#127912; Make It Yours</h2>
-    <p>Everything is configurable with environment variables used by <code>daily_updates.py</code>:</p>
+    <p>Everything is configurable with environment variables used by <code>daily_updates.py</code>. For local runs, put one address per line in the gitignored <code>recipients.txt</code> file; GitHub Actions uses the newline-separated <code>RECIPIENT_EMAILS</code> secret to recreate it:</p>
     <pre><span class="comment"># Change the city and coordinates:</span>
 CITY="Borongan City, Eastern Samar"
 LAT=11.6083

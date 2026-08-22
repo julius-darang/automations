@@ -34,13 +34,14 @@ CRYPTO_ORDER = ["BTC", "ETH", "SOL"]
 STOCK_ORDER = ["BDO", "SM", "TEL", "ALI", "JFC"]
 
 TWELVEDATA_BASE = "https://api.twelvedata.com"
+RECIPIENTS_FILE = Path(__file__).with_name("recipients.txt")
 
 
 @dataclass(frozen=True)
 class Config:
     sender_email: str
     sender_password: str
-    receiver_email: str
+    recipients: tuple[str, ...]
     twelvedata_api_key: str = ""
     timezone: str = "Asia/Manila"
     lat: float = 11.6083
@@ -62,16 +63,46 @@ def load_env(path: str = ".env") -> None:
         os.environ.setdefault(key.strip(), val.strip())
 
 
+def parse_recipient_lines(lines: list[str]) -> tuple[str, ...]:
+    recipients = []
+    seen = set()
+    for line in lines:
+        recipient = line.strip()
+        if not recipient or recipient.startswith("#") or recipient in seen:
+            continue
+        recipients.append(recipient)
+        seen.add(recipient)
+    return tuple(recipients)
+
+
+def load_recipients(path: Path | None = None) -> tuple[str, ...]:
+    path = RECIPIENTS_FILE if path is None else Path(path)
+    if path.exists():
+        recipients = parse_recipient_lines(path.read_text().splitlines())
+        if recipients:
+            return recipients
+
+    recipients = parse_recipient_lines(os.environ.get("RECIPIENT_EMAILS", "").splitlines())
+    if recipients:
+        return recipients
+
+    return parse_recipient_lines([os.environ.get("RECEIVER_EMAIL", "")])
+
+
 def load_config(require_credentials: bool = True) -> Config:
-    required = ("SENDER_EMAIL", "SENDER_PASSWORD", "RECEIVER_EMAIL")
-    missing = [key for key in required if not os.environ.get(key)]
+    recipients = load_recipients()
+    missing = [
+        key for key in ("SENDER_EMAIL", "SENDER_PASSWORD") if not os.environ.get(key)
+    ]
+    if not recipients:
+        missing.append("recipients.txt/RECIPIENT_EMAILS/RECEIVER_EMAIL")
     if require_credentials and missing:
-        print(f"FATAL: Missing environment variables: {', '.join(missing)}")
+        print(f"FATAL: Missing environment variables or recipient file: {', '.join(missing)}")
         sys.exit(1)
     return Config(
         sender_email=os.environ.get("SENDER_EMAIL", ""),
         sender_password=os.environ.get("SENDER_PASSWORD", ""),
-        receiver_email=os.environ.get("RECEIVER_EMAIL", ""),
+        recipients=recipients,
         twelvedata_api_key=os.environ.get("TWELVEDATA_API_KEY", ""),
         timezone=os.environ.get("TIMEZONE", "Asia/Manila"),
         lat=float(os.environ.get("LAT", "11.6083")),
@@ -284,15 +315,15 @@ def build_body(cfg: Config, day_str: str, date_str: str, weather: str, quote: st
 def send_email(cfg: Config, subject: str, body: str) -> bool:
     msg = MIMEMultipart()
     msg["From"]    = cfg.sender_email
-    msg["To"]      = cfg.receiver_email
+    msg["To"]      = ", ".join(cfg.recipients)
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain"))
 
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(cfg.sender_email, cfg.sender_password)
-            server.sendmail(cfg.sender_email, cfg.receiver_email, msg.as_string())
-        print(f"✅ Email sent to {cfg.receiver_email}")
+            server.sendmail(cfg.sender_email, list(cfg.recipients), msg.as_string())
+        print(f"✅ Email sent to {', '.join(cfg.recipients)}")
         return True
     except Exception as e:
         print(f"❌ Failed to send email: {e}")

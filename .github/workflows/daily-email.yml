@@ -19,6 +19,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Prepare recipient list
+        env:
+          RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
+        run: |
+          if [ -n "$RECIPIENT_EMAILS" ]; then
+            printf '%s\n' "$RECIPIENT_EMAILS" > recipients.txt
+          fi
+
       - name: Send email
         run: python daily_updates.py
         env:
