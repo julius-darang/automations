@@ -20,7 +20,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Send email
-        run: python send_email.py
+        run: python daily_updates.py
         env:
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
