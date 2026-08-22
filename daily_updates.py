@@ -72,6 +72,10 @@ def load_config() -> Config:
         sender_password=os.environ["SENDER_PASSWORD"],
         receiver_email=os.environ["RECEIVER_EMAIL"],
         twelvedata_api_key=os.environ.get("TWELVEDATA_API_KEY", ""),
+        timezone=os.environ.get("TIMEZONE", "Asia/Manila"),
+        lat=float(os.environ.get("LAT", "11.6083")),
+        lon=float(os.environ.get("LON", "125.4358")),
+        city=os.environ.get("CITY", "Borongan City, Eastern Samar"),
     )
 
 
