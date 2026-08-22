@@ -348,7 +348,8 @@ def main() -> None:
         print(body)
         return
 
-    send_email(cfg, subject, body)
+    if not send_email(cfg, subject, body):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
