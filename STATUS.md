@@ -3,7 +3,7 @@ name: automations
 description: Daily brief and market-update email via GitHub Actions
 domain: infra
 status: active
-stack: Python · GitHub Actions cron · SMTP
+stack: Python 3.11 · GitHub Actions cron · SMTP
 entry: python daily_updates.py  (local test) · push to trigger cron
 has_repo: true
 updated: 2026-08-22

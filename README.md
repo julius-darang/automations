@@ -160,7 +160,7 @@ TIMEZONE=Asia/Manila
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.11
 - [yfinance](https://pypi.org/project/yfinance/) (for crypto prices)
 
 ## Failure Notifications
