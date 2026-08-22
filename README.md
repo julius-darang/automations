@@ -1,6 +1,6 @@
 # Daily Brief & Market Update Automation
 
-A fully automated daily email briefing that delivers weather, a motivational quote, news headlines, **crypto prices**, and **PH stock prices** to your inbox every afternoon — scheduled via GitHub Actions.
+A fully automated daily email briefing that delivers weather, a motivational quote, news headlines, **AI news headlines**, **crypto prices**, and **PH stock prices** to your inbox every afternoon — scheduled via GitHub Actions.
 
 ## What You Get
 
@@ -20,6 +20,11 @@ Clear sky ☀️ | 26.9°C | Humidity: 85% | Wind: 2.3 km/h
   • Royal Marines board Russian shadow fleet oil tanker in English Channel
   • Watch: MOD video shows Russian shadow fleet tanker interception
   • Why Haiti v Scotland was antidote to the ills of world football
+
+🤖  AI NEWS
+  • New AI research and product announcements from the last 24 hours
+    Source: Example News
+    https://example.com/ai-news
 
 📈  MARKET UPDATE
 
@@ -43,11 +48,12 @@ Clear sky ☀️ | 26.9°C | Humidity: 85% | Wind: 2.3 km/h
 | Weather | [Open-Meteo](https://open-meteo.com/) | None |
 | Quote | [ZenQuotes](https://zenquotes.io/) | None |
 | News | [BBC RSS Feed](https://feeds.bbci.co.uk/news/rss.xml) | None |
+| AI News | [Google News RSS search](https://news.google.com/) | None |
 | Crypto | [yfinance](https://pypi.org/project/yfinance/) | None |
 | PH Stocks | [Twelve Data](https://twelvedata.com/) | TWELVEDATA_API_KEY |
 | Schedule | GitHub Actions cron | None |
 
-Weather, quotes, news, and crypto are free with no registration. PH stocks require a free Twelve Data API key.
+Weather, quotes, news, AI news, and crypto are free with no registration. PH stocks require a free Twelve Data API key.
 
 ## Project Structure
 
@@ -170,6 +176,7 @@ TIMEZONE=Asia/Manila
 ### Error Handling
 
 - **API failures**: Each external API call retries up to 2 times with a 3-second delay before falling back to an error message in the email.
+- **AI News feed failures**: The AI News section is omitted and the rest of the email still sends.
 - **SMTP failures**: If sending fails, the email is saved to `email_fallback_YYYYMMDD_HHMMSS.txt`, the workflow fails, and GitHub Actions retains the fallback as a 30-day artifact.
 - **Workflow failures**: If the GitHub Actions run fails, a push notification is sent via [ntfy.sh](https://ntfy.sh/) using the private `NTFY_TOPIC` secret.
 
