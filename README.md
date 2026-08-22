@@ -56,7 +56,7 @@ automations/
 ├── .github/workflows/daily-email.yml   # GitHub Actions schedule
 ├── .gitignore
 ├── requirements.txt                    # yfinance
-├── send_email.py                       # Core automation script
+├── daily_updates.py                    # Canonical daily brief script
 ├── index.html                          # Landing page (GitHub Pages)
 └── README.md
 ```
@@ -97,7 +97,7 @@ Push the repo to GitHub. The workflow is already configured to run daily at 2PM 
 
 ```bash
 pip install -r requirements.txt
-python send_email.py --dry-run
+python daily_updates.py --dry-run
 ```
 
 This fetches live data and prints the email to your terminal.
@@ -116,29 +116,29 @@ TWELVEDATA_API_KEY=your-twelve-data-key
 Then run:
 
 ```bash
-python send_email.py --local
+python daily_updates.py --local
 ```
 
 This loads variables from `.env` and sends the email.
 
 ### Change city / coordinates
 
-Edit the default values in the `Config` dataclass at the top of `send_email.py`:
+The default location is Borongan City, Eastern Samar. Override it with environment variables (in GitHub Actions, set them in the workflow; locally, add them to `.env`):
 
-```python
-@dataclass(frozen=True)
-class Config:
-    ...
-    lat: float = 11.6083       # Borongan City latitude
-    lon: float = 125.4358      # Borongan City longitude
-    city: str = "Borongan City, Eastern Samar"
+```bash
+CITY="Borongan City, Eastern Samar"
+LAT=11.6083
+LON=125.4358
+TIMEZONE=Asia/Manila
 ```
+
+`LAT` and `LON` are used for the Open-Meteo weather request; `TIMEZONE` controls the date and time shown in the email.
 
 ## How It Works
 
 ```
 ┌─────────────┐    ┌──────────────────┐    ┌──────────────┐
-│  GitHub      │    │  send_email.py   │    │  External    │
+│  GitHub      │    │  daily_updates.py│    │  External    │
 │  Actions     │───▶│                  │───▶│  APIs        │
 │  (cron:      │    │  1. Load config  │    │              │
 │   2PM PH)    │    │  2. Fetch data   │    │  • Open-Meteo│
@@ -155,12 +155,12 @@ class Config:
 ### Error Handling
 
 - **API failures**: Each external API call retries up to 2 times with a 3-second delay before falling back to an error message in the email.
-- **SMTP failures**: If sending fails, the email is saved to a local file (`email_fallback_YYYYMMDD_HHMMSS.txt`) instead of being lost.
-- **Workflow failures**: If the entire GitHub Actions run fails, a push notification is sent via [ntfy.sh](https://ntfy.sh/daily-brief-julius).
+- **SMTP failures**: If sending fails, the email is saved to `email_fallback_YYYYMMDD_HHMMSS.txt`, the workflow fails, and GitHub Actions retains the fallback as a 30-day artifact.
+- **Workflow failures**: If the GitHub Actions run fails, a push notification is sent via [ntfy.sh](https://ntfy.sh/daily-brief-julius).
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.10+
 - [yfinance](https://pypi.org/project/yfinance/) (for crypto prices)
 
 ## Failure Notifications

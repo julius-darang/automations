@@ -1,23 +1,23 @@
 ---
 name: automations
-description: Daily brief + market-alert email crons via GitHub Actions
+description: Daily brief and market-update email via GitHub Actions
 domain: infra
 status: active
 stack: Python · GitHub Actions cron · SMTP
-entry: python send_email.py  (local test) · push to trigger cron
+entry: python daily_updates.py  (local test) · push to trigger cron
 has_repo: true
-updated: 2026-07-31
+updated: 2026-08-22
 ---
 
 # automations
 
 ## State
-Two scripts now (not one): `send_email.py` (daily brief) + `market_alert.py` (market
-update), both fired by GitHub Actions cron (6am UTC = 2pm PH). Deployed and working.
-Location hard-coded to Catbalogan, Samar (minor debt).
+`daily_updates.py` is the single production entry point for the daily brief and market
+update. GitHub Actions runs it at 6am UTC (2pm Philippines time); manual dispatch is
+also available. The default location is Borongan City, Eastern Samar and can be
+overridden with `CITY`, `LAT`, `LON`, and `TIMEZONE` environment variables.
 
 ## Next action
-- Parameterize the Catbalogan location (env var / secrets) so other cities work.
 - No other active work unless a new cron need arises.
 
 ## Conventions
