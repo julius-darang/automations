@@ -86,6 +86,7 @@ In your GitHub repository, go to **Settings → Secrets and variables → Action
 | `SENDER_PASSWORD` | The 16-character app password |
 | `RECEIVER_EMAIL` | Where you want the email delivered |
 | `TWELVEDATA_API_KEY` | (Optional) Twelve Data API key for PH stocks |
+| `NTFY_TOPIC` | Random ntfy.sh topic for failure notifications |
 
 ### 4. Enable the Workflow
 
@@ -156,7 +157,7 @@ TIMEZONE=Asia/Manila
 
 - **API failures**: Each external API call retries up to 2 times with a 3-second delay before falling back to an error message in the email.
 - **SMTP failures**: If sending fails, the email is saved to `email_fallback_YYYYMMDD_HHMMSS.txt`, the workflow fails, and GitHub Actions retains the fallback as a 30-day artifact.
-- **Workflow failures**: If the GitHub Actions run fails, a push notification is sent via [ntfy.sh](https://ntfy.sh/daily-brief-julius).
+- **Workflow failures**: If the GitHub Actions run fails, a push notification is sent via [ntfy.sh](https://ntfy.sh/) using the private `NTFY_TOPIC` secret.
 
 ## Requirements
 
@@ -165,4 +166,4 @@ TIMEZONE=Asia/Manila
 
 ## Failure Notifications
 
-On workflow failure, a push notification is sent to **ntfy.sh/daily-brief-julius**. Subscribe on your phone via the [ntfy app](https://ntfy.sh/) or use any ntfy-compatible client.
+On workflow failure, a push notification is sent to the topic stored in `NTFY_TOPIC`. Subscribe on your phone via the [ntfy app](https://ntfy.sh/) or use any ntfy-compatible client.
