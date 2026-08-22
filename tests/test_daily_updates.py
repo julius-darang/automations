@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import tempfile
@@ -134,33 +135,62 @@ class DailyUpdatesTests(unittest.TestCase):
         self.assertIn("Headline three", result)
         self.assertNotIn("Headline four", result)
 
-    def test_get_ai_news_limits_items_and_includes_source_and_link(self):
+    def test_is_ai_model_advance_covers_provider_watchlist(self):
+        relevant_titles = [
+            "OpenAI releases a new GPT model",
+            "Anthropic updates Claude reasoning capabilities",
+            "xAI launches a Grok benchmark update",
+            "DeepSeek improves model inference",
+            "Google Gemini model performance update",
+            "Meta Llama model release",
+            "Mistral introduces a new model",
+            "Qwen model benchmark results",
+        ]
+        irrelevant_titles = [
+            "UN discusses the future of artificial intelligence",
+            "OpenAI announces a new office location",
+            "AI policy debate expands across governments",
+        ]
+
+        for title in relevant_titles:
+            with self.subTest(title=title):
+                self.assertTrue(daily_updates.is_ai_model_advance(title))
+        for title in irrelevant_titles:
+            with self.subTest(title=title):
+                self.assertFalse(daily_updates.is_ai_model_advance(title))
+
+    def test_get_ai_news_filters_model_advances_and_limits_items(self):
         xml = """\
         <rss><channel>
           <item>
-            <title>AI headline one &amp; more</title>
-            <link>https://example.com/one</link>
-            <source>Example News</source>
+            <title>OpenAI releases a new GPT model</title>
+            <link>https://example.com/openai</link>
+            <source>OpenAI News</source>
           </item>
           <item>
-            <title>AI headline two</title>
-            <link>https://example.com/two</link>
-            <source>Second News</source>
+            <title>UN discusses the future of artificial intelligence</title>
+            <link>https://example.com/un</link>
+            <source>World News</source>
           </item>
           <item>
-            <title>AI headline one &amp; more</title>
+            <title>Anthropic updates Claude reasoning capabilities</title>
+            <link>https://example.com/anthropic</link>
+            <source>Model News</source>
+          </item>
+          <item>
+            <title>openai releases a new gpt model</title>
             <link>https://example.com/duplicate</link>
             <source>Duplicate News</source>
           </item>
           <item>
-            <title>AI headline three</title>
-            <link>https://example.com/three</link>
-            <source>Third News</source>
+            <title>DeepSeek improves model inference</title>
+            <link>https://example.com/deepseek</link>
+            <source>DeepSeek News</source>
           </item>
           <item>
-            <title>AI headline four</title>
-            <link>https://example.com/four</link>
-            <source>Fourth News</source>
+            <title>Google Gemini model benchmark results</title>
+            <link>https://example.com/google</link>
+            <source>Google News</source>
           </item>
         </channel></rss>
         """
@@ -168,20 +198,111 @@ class DailyUpdatesTests(unittest.TestCase):
             result = daily_updates.get_ai_news(self.make_config())
 
         self.assertIsNotNone(result)
-        self.assertIn("AI headline one & more", result)
-        self.assertIn("Source: Example News", result)
-        self.assertIn("https://example.com/three", result)
+        self.assertIn("OpenAI releases a new GPT model", result)
+        self.assertIn("Source: OpenAI News", result)
+        self.assertIn("https://example.com/deepseek", result)
+        self.assertNotIn("future of artificial intelligence", result)
         self.assertNotIn("duplicate", result)
-        self.assertNotIn("AI headline four", result)
-        fetch.assert_called_once_with(
-            daily_updates.AI_NEWS_FEED_URL,
-            0,
-            0,
-        )
+        self.assertNotIn("Google Gemini model benchmark", result)
+        fetch.assert_called_once_with(daily_updates.AI_NEWS_FEED_URL, 0, 0)
+
+    def test_get_google_ai_news_returns_top_three(self):
+        xml = """\
+        <rss><channel>
+          <item><title>AI story one</title><link>https://example.com/one</link><source>One News</source></item>
+          <item><title>AI story two</title><link>https://example.com/two</link><source>Two News</source></item>
+          <item><title>AI story three</title><link>https://example.com/three</link><source>Three News</source></item>
+          <item><title>AI story four</title><link>https://example.com/four</link><source>Four News</source></item>
+        </channel></rss>
+        """
+        with patch.object(daily_updates, "fetch_text", return_value=xml) as fetch:
+            result = daily_updates.get_google_ai_news(self.make_config())
+
+        self.assertIsNotNone(result)
+        self.assertIn("AI story one", result)
+        self.assertIn("AI story three", result)
+        self.assertNotIn("AI story four", result)
+        fetch.assert_called_once_with(daily_updates.AI_GENERAL_NEWS_FEED_URL, 0, 0)
 
     def test_get_ai_news_failure_is_nonfatal(self):
         with patch.object(daily_updates, "fetch_text", side_effect=RuntimeError("offline")):
             result = daily_updates.get_ai_news(self.make_config())
+
+        self.assertIsNone(result)
+
+    def test_get_google_ai_news_failure_is_nonfatal(self):
+        with patch.object(daily_updates, "fetch_text", side_effect=RuntimeError("offline")):
+            result = daily_updates.get_google_ai_news(self.make_config())
+
+        self.assertIsNone(result)
+
+    def test_resolve_google_news_url_uses_decoder_response(self):
+        page_html = '<div data-n-a-sg="signature" data-n-a-ts="12345"></div>'
+        decoded_payload = json.dumps(
+            ["garturlres", "https://www.example.com/news/model-update/?utm_source=google", 1]
+        )
+        decoder_response = ")]}'\n\n" + json.dumps(
+            [["wrb.fr", "Fbv4je", decoded_payload]]
+        )
+        with (
+            patch.object(daily_updates, "fetch_text", return_value=page_html),
+            patch.object(daily_updates, "post_text", return_value=decoder_response) as post,
+        ):
+            result = daily_updates.resolve_google_news_url(
+                "https://news.google.com/rss/articles/article-id?oc=5",
+                0,
+                0,
+            )
+
+        self.assertEqual(
+            result,
+            "https://www.example.com/news/model-update/?utm_source=google",
+        )
+        post.assert_called_once()
+
+    def test_format_google_news_link_compacts_resolved_url(self):
+        with patch.object(
+            daily_updates,
+            "resolve_google_news_url",
+            return_value="https://www.example.com/news/model-update/?utm_source=google",
+        ):
+            result = daily_updates.format_google_news_link(
+                "https://news.google.com/rss/articles/article-id?oc=5",
+                "https://example.com",
+                self.make_config(),
+            )
+
+        self.assertEqual(result, "https://example.com/news/model-update")
+
+    def test_parse_model_pricing_converts_prices_and_ranks(self):
+        payload = {
+            "data": [
+                {"id": "openai/o3", "pricing": {"prompt": "0.000002", "completion": "0.000008"}},
+                {"id": "anthropic/claude-opus-4", "pricing": {"prompt": "0.000005", "completion": "0.000025"}},
+                {"id": "google/gemini-2.5-flash", "pricing": {"prompt": "0.0000003", "completion": "0.0000025"}},
+                {"id": "deepseek/deepseek-chat", "pricing": {"prompt": "0.0000002574", "completion": "0.0000010287"}},
+                {"id": "openai/gpt-4.1-mini", "pricing": {"prompt": "0.0000004", "completion": "0.0000016"}},
+            ]
+        }
+
+        records = daily_updates.parse_model_pricing(payload)
+        by_id = {record["model_id"]: record for record in records}
+
+        self.assertEqual(len(records), 5)
+        self.assertEqual(by_id["openai/o3"]["input_per_million"], 2.0)
+        self.assertEqual(by_id["openai/o3"]["output_per_million"], 8.0)
+        self.assertEqual(by_id["openai/o3"]["comparison_cost"], 4.0)
+        self.assertEqual(by_id["deepseek/deepseek-chat"]["cost_rank"], 1)
+        self.assertEqual(by_id["openai/o3"]["capability_rank"], 1)
+
+        formatted = daily_updates.format_model_pricing(records)
+        self.assertIn("Cheapest: DeepSeek V3", formatted)
+        self.assertIn("Most capable: OpenAI o3", formatted)
+        self.assertIn("1M input + 250K output", formatted)
+
+    def test_get_model_pricing_failure_is_nonfatal(self):
+        with patch.object(daily_updates, "fetch_json", side_effect=RuntimeError("offline")):
+            result = daily_updates.get_model_pricing(self.make_config())
 
         self.assertIsNone(result)
 
@@ -198,14 +319,22 @@ class DailyUpdatesTests(unittest.TestCase):
             '"Keep going"\n— Author',
             "\n  • Headline one",
             market,
-            "  • AI headline one\n    Source: Example News\n    https://example.com/one",
+            "  • OpenAI releases a new GPT model\n    Source: Example News\n    https://example.com/one",
+            "  • AI story one\n    Source: Google News\n    https://example.com/two",
+            "  Cheapest: DeepSeek V3 — $0.50 mix",
         )
 
         self.assertIn("WEATHER — Borongan City, Eastern Samar", body)
         self.assertIn("QUOTE OF THE DAY", body)
         self.assertIn("HEADLINES", body)
-        self.assertIn("AI NEWS", body)
+        self.assertIn("AI MODEL ADVANCES", body)
+        self.assertIn("AI TOP STORIES", body)
+        self.assertIn("AI MODEL PRICING", body)
         self.assertIn("https://example.com/one", body)
+        self.assertLess(body.index("AI MODEL ADVANCES"), body.index("AI TOP STORIES"))
+        self.assertLess(body.index("AI TOP STORIES"), body.index("AI MODEL PRICING"))
+        self.assertLess(body.index("AI MODEL PRICING"), body.index("MARKET UPDATE"))
+        self.assertTrue(body.rstrip().endswith("— Your Agent"))
         self.assertIn("BTC", body)
         self.assertIn("BDO", body)
 
@@ -234,6 +363,8 @@ class DailyUpdatesTests(unittest.TestCase):
                  patch.object(daily_updates, "get_quote", return_value="Quote"), \
                  patch.object(daily_updates, "get_news", return_value=None), \
                  patch.object(daily_updates, "get_ai_news", return_value=None), \
+                 patch.object(daily_updates, "get_google_ai_news", return_value=None), \
+                 patch.object(daily_updates, "get_model_pricing", return_value=None), \
                  patch.object(daily_updates, "get_crypto_prices", return_value={}), \
                  patch.object(daily_updates, "get_stock_prices", return_value={}), \
                  patch.object(daily_updates, "send_email", return_value=False):
@@ -251,6 +382,8 @@ class DailyUpdatesTests(unittest.TestCase):
                      patch.object(daily_updates, "get_quote", return_value="Quote"), \
                      patch.object(daily_updates, "get_news", return_value=None), \
                      patch.object(daily_updates, "get_ai_news", return_value=None), \
+                     patch.object(daily_updates, "get_google_ai_news", return_value=None), \
+                     patch.object(daily_updates, "get_model_pricing", return_value=None), \
                      patch.object(daily_updates, "get_crypto_prices", return_value={}), \
                      patch.object(daily_updates, "get_stock_prices", return_value={}), \
                      patch.object(daily_updates, "send_email") as send:
