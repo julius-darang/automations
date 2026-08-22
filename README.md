@@ -1,6 +1,6 @@
 # Daily Brief & Market Update Automation
 
-A fully automated daily email briefing that delivers weather, a motivational quote, news headlines, **AI news headlines**, **crypto prices**, and **PH stock prices** to your inbox every afternoon — scheduled via GitHub Actions.
+A fully automated daily email briefing that delivers weather, a motivational quote, general news, **AI model advances**, **AI top stories**, **AI model pricing**, **crypto prices**, and **PH stock prices** to your inbox every afternoon — scheduled via GitHub Actions.
 
 ## What You Get
 
@@ -21,10 +21,24 @@ Clear sky ☀️ | 26.9°C | Humidity: 85% | Wind: 2.3 km/h
   • Watch: MOD video shows Russian shadow fleet tanker interception
   • Why Haiti v Scotland was antidote to the ills of world football
 
-🤖  AI NEWS
-  • New AI research and product announcements from the last 24 hours
+🤖  AI MODEL ADVANCES
+  • OpenAI releases a new reasoning model
     Source: Example News
-    https://example.com/ai-news
+    https://example.com/openai/reasoning-model
+
+🗞️  AI TOP STORIES
+  • The latest artificial-intelligence stories from Google News
+    Source: Example News
+    https://example.com/ai/top-story
+
+💵  AI MODEL PRICING
+  MODEL                         IN/M     OUT/M     MIX*   CHEAP  CAP
+  OpenAI o3                      $2.00    $8.00    $4.00  #10     #1
+  DeepSeek V3                   $0.26    $1.03    $0.51  #2      #12
+  OpenAI GPT-4.1 mini            $0.40    $1.60    $0.80  #3      #13
+
+  Cheapest: DeepSeek V3 — $0.51 mix
+  Most capable: OpenAI o3 — curated rank #1
 
 📈  MARKET UPDATE
 
@@ -43,17 +57,21 @@ Clear sky ☀️ | 26.9°C | Humidity: 85% | Wind: 2.3 km/h
 
 ### Data Sources
 
+The AI Model Advances feed watches OpenAI/ChatGPT/GPT, Anthropic/Claude, xAI/Grok, DeepSeek, Google/Gemini, Meta/Llama, Mistral, and Qwen/Alibaba for model releases, benchmarks, reasoning, training, inference, upgrades, and capability updates. AI Top Stories remains a separate top-three Google News RSS feed.
+
 | Section | Source | Key Required |
 |---------|--------|-------------|
 | Weather | [Open-Meteo](https://open-meteo.com/) | None |
 | Quote | [ZenQuotes](https://zenquotes.io/) | None |
 | News | [BBC RSS Feed](https://feeds.bbci.co.uk/news/rss.xml) | None |
-| AI News | [Google News RSS search](https://news.google.com/) | None |
+| AI Model Advances | [Focused Google News RSS search](https://news.google.com/) | None |
+| AI Top Stories | [Google News RSS search](https://news.google.com/) | None |
+| Model Pricing | [OpenRouter model catalog](https://openrouter.ai/models) | None |
 | Crypto | [yfinance](https://pypi.org/project/yfinance/) | None |
 | PH Stocks | [Twelve Data](https://twelvedata.com/) | TWELVEDATA_API_KEY |
 | Schedule | GitHub Actions cron | None |
 
-Weather, quotes, news, AI news, and crypto are free with no registration. PH stocks require a free Twelve Data API key.
+Weather, quotes, news, AI news, and model pricing are free with no registration. PH stocks require a free Twelve Data API key. Capability ranks are a curated comparison, while prices are refreshed from OpenRouter's public catalog.
 
 ## Project Structure
 
@@ -176,7 +194,10 @@ TIMEZONE=Asia/Manila
 ### Error Handling
 
 - **API failures**: Each external API call retries up to 2 times with a 3-second delay before falling back to an error message in the email.
-- **AI News feed failures**: The AI News section is omitted and the rest of the email still sends.
+- **AI Model Advances feed failures**: That section is omitted and the rest of the email still sends.
+- **AI Top Stories feed failures**: That section is omitted independently; model pricing and the rest of the email continue.
+- **Model pricing failures**: The pricing section is omitted; news and market data continue.
+- **Google News link resolution failures**: The item falls back to a compact publisher link when available.
 - **SMTP failures**: If sending fails, the email is saved to `email_fallback_YYYYMMDD_HHMMSS.txt`, the workflow fails, and GitHub Actions retains the fallback as a 30-day artifact.
 - **Workflow failures**: If the GitHub Actions run fails, a push notification is sent via [ntfy.sh](https://ntfy.sh/) using the private `NTFY_TOPIC` secret.
 

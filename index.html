@@ -166,7 +166,7 @@
   <div class="hero">
     <div class="hero-badge">&#9679; Fully Automated &middot; 100% Free</div>
     <h1>Your Daily Brief, Delivered</h1>
-    <p>Weather, a quote, news headlines, crypto prices, and PH stock data &mdash; all in one email, every afternoon.</p>
+    <p>Weather, a quote, general news, AI model advances, pricing, crypto prices, and PH stock data &mdash; all in one email, every afternoon.</p>
     <a class="github-link" href="https://julius-darang.github.io/automations/" target="_blank">&#128279; View Project</a>
   </div>
 
@@ -179,7 +179,8 @@
       <li><strong>&#127782; Weather</strong> &mdash; Should I bring an umbrella today?</li>
       <li><strong>&#128172; Quote</strong> &mdash; A small dose of perspective.</li>
       <li><strong>&#128250; Headlines</strong> &mdash; What's happening in the world.</li>
-      <li><strong>&#129302; AI News</strong> &mdash; Three recent AI headlines with sources and links.</li>
+      <li><strong>&#129302; AI Model News</strong> &mdash; Model advances plus the broader Google News top three.</li>
+      <li><strong>&#128176; AI Pricing</strong> &mdash; Token costs ranked against capability.</li>
       <li><strong>&#128176; Crypto & Stocks</strong> &mdash; How are my investments doing?</li>
     </ul>
     <p style="margin-top:.75rem;">It's <strong>five minutes</strong> to set up and then you never think about it again. It just shows up.</p>
@@ -213,12 +214,26 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
 
 &#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;
 
-&#129302;  AI NEWS
-  &bull; New AI research and product announcements from the last 24 hours
+&#129302;  AI MODEL ADVANCES
+  &bull; OpenAI releases a new reasoning model
     Source: Example News
-    https://example.com/ai-news
+    https://example.com/openai/reasoning-model
 
-&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;
+&#128250;  AI TOP STORIES
+  &bull; The latest artificial-intelligence stories from Google News
+    Source: Example News
+    https://example.com/ai/top-story
+
+&#128176;  AI MODEL PRICING
+  MODEL                         IN/M     OUT/M     MIX*   CHEAP  CAP
+  OpenAI o3                      $2.00    $8.00    $4.00  #10     #1
+  DeepSeek V3                   $0.26    $1.03    $0.51  #2      #12
+  OpenAI GPT-4.1 mini            $0.40    $1.60    $0.80  #3      #13
+
+  Cheapest: DeepSeek V3 &mdash; $0.51 mix
+  Most capable: OpenAI o3 &mdash; curated rank #1
+
+&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;
 
 &#128200;  MARKET UPDATE
 
@@ -229,7 +244,11 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
 
 &#127477;&#127469;  PSE STOCKS
   BDO  &bull;  &#8369;145.50  (&#9650;0.5%)
-  SM  &bull;  &#8369;890.00  (&#9660;0.3%)</div>
+  SM  &bull;  &#8369;890.00  (&#9660;0.3%)
+
+More upgrades coming soon.
+
+&mdash; Your Agent</div>
   </div>
 
   <!-- How it works (simple) -->
@@ -270,11 +289,13 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
       <tr><td>&#127782; Weather</td><td><a href="https://open-meteo.com/">Open-Meteo</a></td><td>No</td></tr>
       <tr><td>&#128172; Quote</td><td><a href="https://zenquotes.io/">ZenQuotes</a></td><td>No</td></tr>
       <tr><td>&#128250; News</td><td><a href="https://feeds.bbci.co.uk/news/rss.xml">BBC RSS</a></td><td>No</td></tr>
-      <tr><td>&#129302; AI News</td><td><a href="https://news.google.com/">Google News RSS search</a></td><td>No</td></tr>
+      <tr><td>&#129302; AI Model Advances</td><td><a href="https://news.google.com/">Focused Google News RSS</a></td><td>No</td></tr>
+      <tr><td>&#128250; AI Top Stories</td><td><a href="https://news.google.com/">Google News RSS</a></td><td>No</td></tr>
+      <tr><td>&#128176; Model Pricing</td><td><a href="https://openrouter.ai/models">OpenRouter catalog</a></td><td>No</td></tr>
       <tr><td>&#128176; Crypto</td><td><a href="https://pypi.org/project/yfinance/">yfinance</a></td><td>No</td></tr>
       <tr><td>&#127477;&#127469; PH Stocks</td><td><a href="https://twelvedata.com/">Twelve Data</a></td><td>Free key</td></tr>
     </table>
-    <p style="margin-top:.75rem;font-size:.9rem;color:#666;">All sources are free. Only PH stocks require a (free) API key from Twelve Data.</p>
+    <p style="margin-top:.75rem;font-size:.9rem;color:#666;">All sources are free. Only PH stocks require a (free) API key from Twelve Data. Model prices come from OpenRouter; capability ranks are a transparent curated comparison.</p>
   </div>
 
   <!-- Setup steps -->
@@ -323,7 +344,7 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
   <div class="card">
     <h2>&#128737;&#65039; What if Something Breaks?</h2>
     <ul>
-      <li>If an API is down, the email still sends &mdash; that section just shows a friendly "unavailable" message.</li>
+      <li>If an API is down, the email still sends &mdash; that section just shows a friendly "unavailable" message. The two AI news feeds and model pricing fail independently.</li>
       <li>If the email fails to send, the content is saved to a fallback file and uploaded to GitHub Actions as a 30-day artifact.</li>
       <li>If the entire workflow fails, a push notification is sent via <a href="https://ntfy.sh/">ntfy.sh</a> so you know immediately.</li>
     </ul>
@@ -351,7 +372,7 @@ python daily_updates.py --local     <span class="comment"># Send using .env file
       <li><strong>Language:</strong> Python 3.11</li>
       <li><strong>Scheduling:</strong> GitHub Actions cron (free tier)</li>
       <li><strong>Email delivery:</strong> Gmail SMTP via <code>smtplib</code></li>
-      <li><strong>APIs:</strong> Open-Meteo, ZenQuotes, BBC RSS, Google News RSS, yfinance, Twelve Data</li>
+      <li><strong>APIs:</strong> Open-Meteo, ZenQuotes, BBC RSS, Google News RSS, OpenRouter, yfinance, Twelve Data</li>
     </ul>
     <p style="margin-top:.75rem;font-size:.9rem;color:#666;">Source code on <a href="https://github.com/julius-darang/automations">GitHub</a></p>
   </div>
