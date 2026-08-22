@@ -62,15 +62,16 @@ def load_env(path: str = ".env") -> None:
         os.environ.setdefault(key.strip(), val.strip())
 
 
-def load_config() -> Config:
-    missing = [k for k in ("SENDER_EMAIL", "SENDER_PASSWORD", "RECEIVER_EMAIL") if k not in os.environ]
-    if missing:
+def load_config(require_credentials: bool = True) -> Config:
+    required = ("SENDER_EMAIL", "SENDER_PASSWORD", "RECEIVER_EMAIL")
+    missing = [key for key in required if not os.environ.get(key)]
+    if require_credentials and missing:
         print(f"FATAL: Missing environment variables: {', '.join(missing)}")
         sys.exit(1)
     return Config(
-        sender_email=os.environ["SENDER_EMAIL"],
-        sender_password=os.environ["SENDER_PASSWORD"],
-        receiver_email=os.environ["RECEIVER_EMAIL"],
+        sender_email=os.environ.get("SENDER_EMAIL", ""),
+        sender_password=os.environ.get("SENDER_PASSWORD", ""),
+        receiver_email=os.environ.get("RECEIVER_EMAIL", ""),
         twelvedata_api_key=os.environ.get("TWELVEDATA_API_KEY", ""),
         timezone=os.environ.get("TIMEZONE", "Asia/Manila"),
         lat=float(os.environ.get("LAT", "11.6083")),
@@ -311,7 +312,7 @@ def main() -> None:
     if args.local:
         load_env()
 
-    cfg = load_config()
+    cfg = load_config(require_credentials=not args.dry_run)
     day_str, date_str = get_date_info(cfg.timezone)
     weather = get_weather(cfg)
     quote   = get_quote(cfg)
