@@ -179,6 +179,7 @@
       <li><strong>&#127782; Weather</strong> &mdash; Should I bring an umbrella today?</li>
       <li><strong>&#128172; Quote</strong> &mdash; A small dose of perspective.</li>
       <li><strong>&#128250; Headlines</strong> &mdash; What's happening in the world.</li>
+      <li><strong>&#129302; AI News</strong> &mdash; Three recent AI headlines with sources and links.</li>
       <li><strong>&#128176; Crypto & Stocks</strong> &mdash; How are my investments doing?</li>
     </ul>
     <p style="margin-top:.75rem;">It's <strong>five minutes</strong> to set up and then you never think about it again. It just shows up.</p>
@@ -211,6 +212,13 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
   &bull; Why Haiti v Scotland was antidote to the ills of football
 
 &#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;
+
+&#129302;  AI NEWS
+  &bull; New AI research and product announcements from the last 24 hours
+    Source: Example News
+    https://example.com/ai-news
+
+&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;
 
 &#128200;  MARKET UPDATE
 
@@ -262,6 +270,7 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
       <tr><td>&#127782; Weather</td><td><a href="https://open-meteo.com/">Open-Meteo</a></td><td>No</td></tr>
       <tr><td>&#128172; Quote</td><td><a href="https://zenquotes.io/">ZenQuotes</a></td><td>No</td></tr>
       <tr><td>&#128250; News</td><td><a href="https://feeds.bbci.co.uk/news/rss.xml">BBC RSS</a></td><td>No</td></tr>
+      <tr><td>&#129302; AI News</td><td><a href="https://news.google.com/">Google News RSS search</a></td><td>No</td></tr>
       <tr><td>&#128176; Crypto</td><td><a href="https://pypi.org/project/yfinance/">yfinance</a></td><td>No</td></tr>
       <tr><td>&#127477;&#127469; PH Stocks</td><td><a href="https://twelvedata.com/">Twelve Data</a></td><td>Free key</td></tr>
     </table>
@@ -342,7 +351,7 @@ python daily_updates.py --local     <span class="comment"># Send using .env file
       <li><strong>Language:</strong> Python 3.11</li>
       <li><strong>Scheduling:</strong> GitHub Actions cron (free tier)</li>
       <li><strong>Email delivery:</strong> Gmail SMTP via <code>smtplib</code></li>
-      <li><strong>APIs:</strong> Open-Meteo, ZenQuotes, BBC RSS, yfinance, Twelve Data</li>
+      <li><strong>APIs:</strong> Open-Meteo, ZenQuotes, BBC RSS, Google News RSS, yfinance, Twelve Data</li>
     </ul>
     <p style="margin-top:.75rem;font-size:.9rem;color:#666;">Source code on <a href="https://github.com/julius-darang/automations">GitHub</a></p>
   </div>
