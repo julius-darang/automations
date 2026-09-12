@@ -164,7 +164,7 @@
 
   <!-- Hero -->
   <div class="hero">
-    <div class="hero-badge">&#9679; Fully Automated &middot; 100% Free</div>
+    <div class="hero-badge">&#9679; Daily Personal Brief &middot; No Server Needed</div>
     <h1>Your Daily Brief, Delivered</h1>
     <p>Weather, a quote, general news, AI model advances, pricing, crypto prices, and PH stock data &mdash; all in one email, every afternoon.</p>
     <a class="github-link" href="https://julius-darang.github.io/automations/" target="_blank">&#128279; View Project</a>
@@ -174,26 +174,26 @@
   <div class="card">
     <h2>&#128200; Why Bother?</h2>
     <p>Every day, most of us check the same things: weather, news, crypto, stocks. That adds up to a dozen taps across five apps before lunch.</p>
-    <p>This automation <strong>condenses all of that into a single email</strong> that arrives automatically at the same time every day. No notifications, no doomscrolling, no decisions. Just the information you actually need:</p>
+    <p>This automation <strong>condenses all of that into a single email</strong> that is scheduled for each afternoon. No notifications, no doomscrolling, no decisions. Just the information you actually need:</p>
     <ul>
       <li><strong>&#127782; Weather</strong> &mdash; Should I bring an umbrella today?</li>
       <li><strong>&#128172; Quote</strong> &mdash; A small dose of perspective.</li>
       <li><strong>&#128250; Headlines</strong> &mdash; What's happening in the world.</li>
-      <li><strong>&#129302; AI Model News</strong> &mdash; Model advances plus the broader Google News top three.</li>
-      <li><strong>&#128176; AI Pricing</strong> &mdash; Token costs ranked against capability.</li>
+      <li><strong>&#129302; AI Model News</strong> &mdash; Model advances plus broader AI stories, deduplicated across both feeds.</li>
+      <li><strong>&#128176; AI Pricing</strong> &mdash; Monday token-price comparison for a small configurable watchlist.</li>
       <li><strong>&#128176; Crypto & Stocks</strong> &mdash; How are my investments doing?</li>
     </ul>
-    <p style="margin-top:.75rem;">It's <strong>five minutes</strong> to set up and then you never think about it again. It just shows up.</p>
+    <p style="margin-top:.75rem;">Set it up once, then check the source dates and missing-data footer in each briefing.</p>
   </div>
 
   <!-- What it looks like -->
   <div class="card">
     <h2>&#128231; What Arrives in Your Inbox</h2>
-    <p>Here's exactly what the email looks like &mdash; clean, plain text, no tracking pixels, no HTML fluff:</p>
+    <p>Here's an illustrative Monday email &mdash; clean, plain text, no tracking pixels, no HTML fluff:</p>
     <div class="email-preview">Good afternoon!
 
 &#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;
-&#128197;  Sunday, June 14, 2026
+&#128197;  Monday, September 14, 2026
 &#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;
 
 &#127774;  WEATHER &mdash; Borongan City, Eastern Samar
@@ -225,28 +225,31 @@ Clear sky &#9728;&#65039; | 26.9&deg;C | Humidity: 85% | Wind: 2.3 km/h
     https://example.com/ai/top-story
 
 &#128176;  AI MODEL PRICING
-  MODEL                         IN/M     OUT/M     MIX*   CHEAP  CAP
-  OpenAI o3                      $2.00    $8.00    $4.00  #10     #1
-  DeepSeek V3                   $0.26    $1.03    $0.51  #2      #12
-  OpenAI GPT-4.1 mini            $0.40    $1.60    $0.80  #3      #13
+  openai/gpt-4.1-mini
+    Input/M: $0.40 | Output/M: $1.60 | Mix: $0.80
+  openai/o3
+    Input/M: $2.00 | Output/M: $8.00 | Mix: $4.00
 
-  Cheapest: DeepSeek V3 &mdash; $0.51 mix
-  Most capable: OpenAI o3 &mdash; curated rank #1
+  Cheapest in watchlist: openai/gpt-4.1-mini &mdash; $0.80 mix
+  Mix = 1M input + 250K output. Example prices only.
 
 &#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;
 
 &#128200;  MARKET UPDATE
 
-&#129499;  CRYPTO
+&#129499;  CRYPTO &mdash; change vs previous daily close
   BTC  &bull;  $67,890.12  (&#9650;2.3%)
+    Daily bar: 2026-09-14T00:00:00+00:00
   ETH  &bull;  $3,456.78  (&#9660;1.2%)
-  SOL  &bull;  $145.67  (&#9650;0.8%)
+    Daily bar: 2026-09-14T00:00:00+00:00
 
 &#127477;&#127469;  PSE STOCKS
   BDO  &bull;  &#8369;145.50  (&#9650;0.5%)
+    As of: 2026-09-11 Asia/Manila
   SM  &bull;  &#8369;890.00  (&#9660;0.3%)
+    As of: 2026-09-11 Asia/Manila
 
-More upgrades coming soon.
+Missing data: Crypto: SOL
 
 &mdash; Your Agent</div>
   </div>
@@ -254,7 +257,7 @@ More upgrades coming soon.
   <!-- How it works (simple) -->
   <div class="card">
     <h2>&#9881;&#65039; How It Works</h2>
-    <p>There's no server, no app, no monthly bill. The whole thing runs on GitHub's free servers and uses free APIs for data.</p>
+    <p>A personal briefing can run without a monthly bill using a public GitHub repository and public data sources. PH stocks are optional and depend on your data plan.</p>
     <div style="text-align:center;padding:.75rem 0;">
       <div style="display:inline-flex;align-items:center;gap:1.5rem;flex-wrap:wrap;justify-content:center;">
         <div style="text-align:center;">
@@ -278,7 +281,7 @@ More upgrades coming soon.
         </div>
       </div>
     </div>
-    <p style="text-align:center;color:#666;font-size:.9rem;">The whole pipeline is <strong>free</strong> &mdash; GitHub Actions has a free tier, all APIs are no-cost, and Gmail is free.</p>
+    <p style="text-align:center;color:#666;font-size:.9rem;">Standard GitHub Actions runners are free for public repositories. Weather uses the noncommercial Open-Meteo endpoint; PH stock entitlement must be checked separately.</p>
   </div>
 
   <!-- Data sources -->
@@ -293,14 +296,14 @@ More upgrades coming soon.
       <tr><td>&#128250; AI Top Stories</td><td><a href="https://news.google.com/">Google News RSS</a></td><td>No</td></tr>
       <tr><td>&#128176; Model Pricing</td><td><a href="https://openrouter.ai/models">OpenRouter catalog</a></td><td>No</td></tr>
       <tr><td>&#128176; Crypto</td><td><a href="https://pypi.org/project/yfinance/">yfinance</a></td><td>No</td></tr>
-      <tr><td>&#127477;&#127469; PH Stocks</td><td><a href="https://twelvedata.com/">Twelve Data</a></td><td>Free key</td></tr>
+      <tr><td>&#127477;&#127469; PH Stocks</td><td><a href="https://twelvedata.com/">Twelve Data</a></td><td>Optional key; verify plan</td></tr>
     </table>
-    <p style="margin-top:.75rem;font-size:.9rem;color:#666;">All sources are free. Only PH stocks require a (free) API key from Twelve Data. Model prices come from OpenRouter; capability ranks are a transparent curated comparison.</p>
+    <p style="margin-top:.75rem;font-size:.9rem;color:#666;">Model prices come from the public OpenRouter catalog on Mondays. No paid model calls are made. A free Twelve Data key does not guarantee PH stock access.</p>
   </div>
 
   <!-- Setup steps -->
   <div class="card">
-    <h2>&#128736;&#65039; Setup: 5 Minutes, 3 Steps</h2>
+    <h2>&#128736;&#65039; Setup: 3 Steps</h2>
     <p>You need a free GitHub account and a Gmail address. That's it.</p>
 
     <ol class="step-list">
@@ -321,8 +324,9 @@ More upgrades coming soon.
             <tr><td><code>SENDER_PASSWORD</code></td><td>The app password from step 1</td></tr>
             <tr><td><code>RECIPIENT_EMAILS</code></td><td>Preferred: one recipient email address per line</td></tr>
             <tr><td><code>RECEIVER_EMAIL</code></td><td>Single-recipient fallback</td></tr>
-            <tr><td><code>TWELVEDATA_API_KEY</code></td><td>(Optional) <a href="https://twelvedata.com/">Twelve Data</a> key for PH stocks</td></tr>
+            <tr><td><code>TWELVEDATA_API_KEY</code></td><td>(Optional) <a href="https://twelvedata.com/">Twelve Data</a> key with PH stock entitlement</td></tr>
             <tr><td><code>NTFY_TOPIC</code></td><td>A random <a href="https://ntfy.sh/">ntfy.sh</a> topic for failure notifications</td></tr>
+            <tr><td><code>HEALTHCHECKS_PING_URL</code></td><td>Optional daily monitor for missed runs</td></tr>
           </table>
         </div>
       </li>
@@ -330,13 +334,13 @@ More upgrades coming soon.
         <span class="step-num">3</span>
         <div>
           <strong>Push the code to GitHub</strong>
-          <p style="font-size:.9rem;margin-top:.2rem;">Push the repo. The workflow activates automatically and sends your first email at 2PM PH time. You can also trigger it manually from the Actions tab.</p>
+          <p style="font-size:.9rem;margin-top:.2rem;">Push the repo. The workflow schedules email for 2:17PM PH time; actual start time can vary. You can also trigger it manually from the Actions tab.</p>
         </div>
       </li>
     </ol>
 
     <div style="background:#e8f5e9;border-radius:10px;padding:1rem 1.25rem;margin-top:1rem;">
-      <strong>&#9989; That's it.</strong> No server setup, no cron config, no monthly fees. Your daily brief will arrive automatically from tomorrow afternoon.
+      <strong>&#9989; That's it.</strong> No server setup, no cron config, no monthly fees. The daily brief is scheduled for each afternoon; GitHub can delay or miss runs.
     </div>
   </div>
 
@@ -344,21 +348,22 @@ More upgrades coming soon.
   <div class="card">
     <h2>&#128737;&#65039; What if Something Breaks?</h2>
     <ul>
-      <li>If an API is down, the email still sends &mdash; that section just shows a friendly "unavailable" message. The two AI news feeds and model pricing fail independently.</li>
-      <li>If the email fails to send, the content is saved to a fallback file and uploaded to GitHub Actions as a 30-day artifact.</li>
-      <li>If the entire workflow fails, a push notification is sent via <a href="https://ntfy.sh/">ntfy.sh</a> so you know immediately.</li>
+      <li>If a source is unavailable, the email still sends its useful sections and lists missing data in the footer and Actions summary.</li>
+      <li>Failed or partially accepted delivery saves a fallback artifact for 30 days. Check refused recipients before resending to avoid duplicates.</li>
+      <li>If the entire workflow fails, a push notification is sent via <a href="https://ntfy.sh/">ntfy.sh</a> when the topic is configured. An optional Healthchecks.io monitor can detect jobs that never start.</li>
     </ul>
   </div>
 
   <!-- Customize -->
   <div class="card">
     <h2>&#127912; Make It Yours</h2>
-    <p>Everything is configurable with environment variables used by <code>daily_updates.py</code>. For local runs, put one address per line in the gitignored <code>recipients.txt</code> file; GitHub Actions uses the newline-separated <code>RECIPIENT_EMAILS</code> secret to recreate it:</p>
+    <p>Location and the model watchlist are configurable with environment variables used by <code>daily_updates.py</code>. For local runs, put one address per line in the gitignored <code>recipients.txt</code> file; GitHub Actions uses the newline-separated <code>RECIPIENT_EMAILS</code> secret to recreate it. Set the optional <code>HEALTHCHECKS_PING_URL</code> secret to enable a daily monitor; see the README for setup:</p>
     <pre><span class="comment"># Change the city and coordinates:</span>
 CITY="Borongan City, Eastern Samar"
 LAT=11.6083
 LON=125.4358
 TIMEZONE=Asia/Manila
+AI_MODEL_IDS=openai/o3,openai/gpt-4.1-mini,google/gemini-2.5-flash
 
 <span class="comment"># Or run locally to test:</span>
 python daily_updates.py --dry-run   <span class="comment"># Preview the email</span>

@@ -236,43 +236,72 @@ class DailyUpdatesTests(unittest.TestCase):
 
         self.assertIsNone(result)
 
-    def test_resolve_google_news_url_uses_decoder_response(self):
-        page_html = '<div data-n-a-sg="signature" data-n-a-ts="12345"></div>'
-        decoded_payload = json.dumps(
-            ["garturlres", "https://www.example.com/news/model-update/?utm_source=google", 1]
-        )
-        decoder_response = ")]}'\n\n" + json.dumps(
-            [["wrb.fr", "Fbv4je", decoded_payload]]
-        )
-        with (
-            patch.object(daily_updates, "fetch_text", return_value=page_html),
-            patch.object(daily_updates, "post_text", return_value=decoder_response) as post,
-        ):
-            result = daily_updates.resolve_google_news_url(
-                "https://news.google.com/rss/articles/article-id?oc=5",
-                0,
-                0,
-            )
+    def test_news_preserves_article_query_and_deduplicates_across_feeds(self):
+        xml = """<rss><channel>
+        <item><title>OpenAI releases a model - Publisher One</title><link>https://news.google.com/rss/articles/id?oc=5</link><source url="https://publisher.com">Publisher One</source></item>
+        <item><title>OpenAI releases a model - Publisher Two</title><link>https://publisher.com/read?id=42</link><source>Publisher Two</source></item>
+        <item><title>AI policy discussion</title><link>https://publisher.com/read?id=43</link></item>
+        </channel></rss>"""
+        seen = set()
+        with patch.object(daily_updates, "fetch_text", return_value=xml):
+            model_news = daily_updates.get_ai_news(self.make_config(), seen)
+            general_news = daily_updates.get_google_ai_news(self.make_config(), seen)
+        self.assertIn("https://news.google.com/rss/articles/id?oc=5", model_news)
+        self.assertNotIn("Publisher Two", model_news)
+        self.assertNotIn("OpenAI releases", general_news)
+        self.assertIn("https://publisher.com/read?id=43", general_news)
 
-        self.assertEqual(
-            result,
-            "https://www.example.com/news/model-update/?utm_source=google",
-        )
-        post.assert_called_once()
+    def test_bbc_headlines_include_article_links(self):
+        with patch.object(daily_updates, "fetch_text", return_value=
+                          '<rss><channel><item><title>Headline</title><link>https://example.com/read?id=1</link></item></channel></rss>'):
+            result = daily_updates.get_news(self.make_config())
+        self.assertIn("https://example.com/read?id=1", result)
 
-    def test_format_google_news_link_compacts_resolved_url(self):
-        with patch.object(
-            daily_updates,
-            "resolve_google_news_url",
-            return_value="https://www.example.com/news/model-update/?utm_source=google",
-        ):
-            result = daily_updates.format_google_news_link(
-                "https://news.google.com/rss/articles/article-id?oc=5",
-                "https://example.com",
-                self.make_config(),
-            )
+    def test_partial_delivery_fails_and_saves_fallback(self):
+        config = self.make_config(recipients=("ok@example.com", "refused@example.com"))
+        with tempfile.TemporaryDirectory() as directory, patch.object(daily_updates.smtplib, "SMTP_SSL") as smtp:
+            smtp.return_value.__enter__.return_value.sendmail.return_value = {
+                "refused@example.com": (550, b"Rejected")}
+            original_directory = os.getcwd()
+            try:
+                os.chdir(directory)
+                self.assertFalse(daily_updates.send_email(config, "Subject", "Body"))
+                saved = next(Path(directory).glob("email_fallback_*.txt")).read_text()
+                self.assertIn("Body", saved)
+                self.assertIn("refused@example.com", saved)
+                self.assertIn("partially", saved.lower())
+            finally:
+                os.chdir(original_directory)
+        self.assertEqual(smtp.call_args.kwargs["timeout"], 30)
 
-        self.assertEqual(result, "https://example.com/news/model-update")
+    def test_pricing_schedule_uses_local_monday(self):
+        from datetime import datetime, timezone
+        sunday_utc = datetime(2026, 9, 13, 16, 30, tzinfo=timezone.utc)
+        self.assertTrue(daily_updates.pricing_due("Asia/Manila", sunday_utc))
+        self.assertFalse(daily_updates.pricing_due("UTC", sunday_utc))
+
+    def test_missing_sections_are_visible_in_body_and_summary(self):
+        body = daily_updates.build_body(self.make_config(), "Monday", "September 14, 2026",
+                                       "Weather", "Quote", None,
+                                       missing=["Headlines", "Crypto: ETH"])
+        self.assertIn("Headlines", body)
+        self.assertIn("Crypto: ETH", body)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "summary.md"
+            with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(path)}):
+                daily_updates.write_run_summary(["Headlines", "Crypto: ETH"], "Sent")
+            self.assertIn("Crypto: ETH", path.read_text())
+            self.assertIn("Sent", path.read_text())
+
+    def test_stock_quotes_preserve_timestamp_and_reject_invalid_price(self):
+        payload = {"close": "145.50", "percent_change": "0.5",
+                   "datetime": "2026-09-11", "exchange_timezone": "Asia/Manila"}
+        with patch.object(daily_updates, "fetch_json", side_effect=[payload] + [{"close": "nan"}] * 4):
+            stocks = daily_updates.get_stock_prices(self.make_config(twelvedata_api_key="test"))
+        self.assertEqual(list(stocks), ["BDO"])
+        result = daily_updates.build_market_section({}, stocks)
+        self.assertIn("2026-09-11", result)
+        self.assertIn("Asia/Manila", result)
 
     def test_parse_model_pricing_converts_prices_and_ranks(self):
         payload = {
@@ -288,17 +317,85 @@ class DailyUpdatesTests(unittest.TestCase):
         records = daily_updates.parse_model_pricing(payload)
         by_id = {record["model_id"]: record for record in records}
 
-        self.assertEqual(len(records), 5)
+        self.assertEqual(len(records), 3)
         self.assertEqual(by_id["openai/o3"]["input_per_million"], 2.0)
         self.assertEqual(by_id["openai/o3"]["output_per_million"], 8.0)
         self.assertEqual(by_id["openai/o3"]["comparison_cost"], 4.0)
-        self.assertEqual(by_id["deepseek/deepseek-chat"]["cost_rank"], 1)
-        self.assertEqual(by_id["openai/o3"]["capability_rank"], 1)
+        self.assertEqual(by_id["openai/gpt-4.1-mini"]["cost_rank"], 1)
 
         formatted = daily_updates.format_model_pricing(records)
-        self.assertIn("Cheapest: DeepSeek V3", formatted)
-        self.assertIn("Most capable: OpenAI o3", formatted)
+        self.assertIn("Cheapest in watchlist: openai/gpt-4.1-mini", formatted)
+        self.assertNotIn("Most capable", formatted)
         self.assertIn("1M input + 250K output", formatted)
+
+    def test_crypto_daily_bar_timestamp_and_missing_previous_close(self):
+        import pandas as pd
+        history = pd.DataFrame({"Close": [100.0]},
+                               index=pd.to_datetime(["2026-09-12T00:00:00Z"]))
+        with patch.object(daily_updates.yf, "Ticker") as ticker:
+            ticker.return_value.history.return_value = history
+            result = daily_updates.build_market_section(daily_updates.get_crypto_prices(), {})
+        self.assertIn("Daily bar: 2026-09-12T00:00:00+00:00", result)
+        self.assertIn("change unavailable", result)
+        self.assertNotIn("▲0.0%", result)
+
+    def test_main_preview_handles_weekly_pricing_and_disabled_stocks(self):
+        import io
+        import pandas as pd
+        from contextlib import redirect_stdout
+        history = pd.DataFrame({"Close": [100.0, 110.0]},
+                               index=pd.to_datetime(["2026-09-11T00:00:00Z", "2026-09-12T00:00:00Z"]))
+        def json_response(url, *args):
+            if "open-meteo" in url:
+                return {"current": {"temperature_2m": 27, "relative_humidity_2m": 80,
+                                    "windspeed_10m": 3, "weathercode": 0}}
+            if "zenquotes" in url:
+                return [{"q": "Keep going", "a": "Author"}]
+            if "openrouter" in url:
+                return {"data": [{"id": model_id, "pricing": {"prompt": "0.000002", "completion": "0.000008"}}
+                                 for model_id in daily_updates.DEFAULT_MODEL_IDS]}
+            raise AssertionError("Unexpected data request")
+        def text_response(url, *args):
+            if "bbci" in url:
+                raise OSError("offline")
+            return '<rss><channel><item><title>OpenAI releases a model</title><link>https://example.com/read?id=1</link></item></channel></rss>'
+        for due, force in ((False, False), (True, False), (False, True)):
+            with self.subTest(due=due, force=force), tempfile.TemporaryDirectory() as directory:
+                summary_path = Path(directory) / "summary.md"
+                output = io.StringIO()
+                with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary_path)}, clear=True), \
+                     patch.object(daily_updates, "RECIPIENTS_FILE", Path(directory) / "absent"), \
+                     patch.object(daily_updates, "pricing_due", return_value=due), \
+                     patch.object(daily_updates, "fetch_json", side_effect=json_response), \
+                     patch.object(daily_updates, "fetch_text", side_effect=text_response), \
+                     patch.object(daily_updates.yf, "Ticker") as ticker, \
+                     patch.object(daily_updates.smtplib, "SMTP_SSL", side_effect=AssertionError("Preview must not send")), \
+                     patch.object(sys, "argv", ["daily_updates.py", "--dry-run"] + (["--pricing"] if force else [])), \
+                     redirect_stdout(output):
+                    ticker.return_value.history.return_value = history
+                    daily_updates.main()
+                rendered = output.getvalue()
+                summary = summary_path.read_text()
+                self.assertEqual("AI MODEL PRICING" in rendered, due or force)
+                self.assertIn("No new matching stories", rendered)
+                self.assertIn("Daily bar: 2026-09-12T00:00:00+00:00", rendered)
+                self.assertIn("▲10.0%", rendered)
+                self.assertIn("Preview", summary)
+                self.assertIn("Missing data: Headlines", summary)
+                self.assertNotIn("PH stocks", summary)
+                self.assertNotIn("Model pricing", summary)
+                self.assertNotIn("AI top stories", summary)
+
+    def test_custom_watchlist_reports_unpriced_ids(self):
+        payload = {"data": [{"id": "example/model-v1", "pricing": {"prompt": "0", "completion": "0"}}]}
+        missing = []
+        with patch.dict(os.environ, {"AI_MODEL_IDS": "example/model-v1,absent/model,example/model-v1"}), \
+             patch.object(daily_updates, "fetch_json", return_value=payload):
+            result = daily_updates.get_model_pricing(self.make_config(), missing)
+        self.assertEqual(missing, ["Model price: absent/model"])
+        self.assertIn("example/model-v1", result)
+        self.assertIn("Mix: $0", result)
+        self.assertNotIn("openai/o3", result)
 
     def test_get_model_pricing_failure_is_nonfatal(self):
         with patch.object(daily_updates, "fetch_json", side_effect=RuntimeError("offline")):
@@ -309,7 +406,8 @@ class DailyUpdatesTests(unittest.TestCase):
     def test_build_body_contains_brief_and_market_sections(self):
         config = self.make_config()
         market = daily_updates.build_market_section(
-            {"BTC": (100.0, 2.5)}, {"BDO": (145.5, -0.5)}
+            {"BTC": daily_updates.MarketQuote(100.0, 2.5, "2026-09-12 UTC")},
+            {"BDO": daily_updates.MarketQuote(145.5, -0.5, "2026-09-11 Asia/Manila")}
         )
         body = daily_updates.build_body(
             config,

@@ -5,3 +5,4 @@ __pycache__/
 email_fallback_*.txt
 .ruff_cache/
 recipients.txt
+.venv/
