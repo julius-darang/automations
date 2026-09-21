@@ -1,211 +1,134 @@
-# Daily Brief & Market Update Automation
+# Daily Brief & Market Update
 
-A fully automated daily email briefing that delivers weather, a motivational quote, general news, **AI model advances**, **AI top stories**, **AI model pricing**, **crypto prices**, and **PH stock prices** to your inbox every afternoon — scheduled via GitHub Actions.
+One Python script fetches a personal briefing and sends it through Gmail. GitHub
+Actions schedules it daily for **2:17 PM Philippines time** (06:17 UTC). Scheduled
+runs may arrive late; manual dispatch is also available.
 
-## What You Get
+## The briefing
 
-Each day at **2:00 PM PH time (UTC+8)**, the automation sends an email like this:
+- Borongan weather, a quote, and three BBC headlines with article links.
+- Up to three AI model advances and three broader AI stories, deduplicated across
+  both feeds by article URL and normalized title. Original article URLs are kept.
+- **Mondays only:** OpenRouter token prices for a small model watchlist. Exact model
+  IDs and the cheapest option within that watchlist are shown; no capability ranking.
+- BTC, ETH, SOL and optional BDO, SM, TEL, ALI, JFC quotes. Market rows include the
+  source date/time when available; unknown timestamps are explicitly labeled.
+- A footer identifies missing data. A missing optional API key or a non-Monday
+  pricing section is not treated as a failure.
 
-```
-📅  Sunday, June 14, 2026
+Crypto percentages compare the latest daily bar with the previous daily close,
+not a rolling 24-hour return. The bar timestamp is labeled as such. Stock quotes
+may be delayed or from an earlier trading day; always check their source timestamp.
 
-🌤  WEATHER — Borongan City, Eastern Samar
-Clear sky ☀️ | 26.9°C | Humidity: 85% | Wind: 2.3 km/h
+## Sources and cost
 
-💬  QUOTE OF THE DAY
-"To belittle, you have to be little."
-— Kahlil Gibran
+| Section | Source | Access |
+| --- | --- | --- |
+| Weather | [Open-Meteo](https://open-meteo.com/en/pricing) | Free for noncommercial use within limits |
+| Quote | [ZenQuotes](https://zenquotes.io/) | Public endpoint |
+| Headlines | [BBC RSS](https://feeds.bbci.co.uk/news/rss.xml) | Public feed |
+| AI news | [Google News RSS](https://news.google.com/) | Public feeds |
+| Weekly model prices | [OpenRouter catalog](https://openrouter.ai/models) | Public catalog; no model inference calls |
+| Crypto | [yfinance](https://pypi.org/project/yfinance/) | Public Yahoo data access |
+| PH stocks | [Twelve Data](https://twelvedata.com/pricing) | Optional key; verify PSE entitlement on your plan |
 
-📰  HEADLINES
-  • Royal Marines board Russian shadow fleet oil tanker in English Channel
-  • Watch: MOD video shows Russian shadow fleet tanker interception
-  • Why Haiti v Scotland was antidote to the ills of world football
+A free Twelve Data key does not guarantee access to every exchange. Keep PH stocks
+optional if your account does not include them; this project does not require an
+upgrade. API availability and terms can change.
 
-🤖  AI MODEL ADVANCES
-  • OpenAI releases a new reasoning model
-    Source: Example News
-    https://example.com/openai/reasoning-model
-
-🗞️  AI TOP STORIES
-  • The latest artificial-intelligence stories from Google News
-    Source: Example News
-    https://example.com/ai/top-story
-
-💵  AI MODEL PRICING
-  MODEL                         IN/M     OUT/M     MIX*   CHEAP  CAP
-  OpenAI o3                      $2.00    $8.00    $4.00  #10     #1
-  DeepSeek V3                   $0.26    $1.03    $0.51  #2      #12
-  OpenAI GPT-4.1 mini            $0.40    $1.60    $0.80  #3      #13
-
-  Cheapest: DeepSeek V3 — $0.51 mix
-  Most capable: OpenAI o3 — curated rank #1
-
-📈  MARKET UPDATE
-
-🪙  CRYPTO
-  BTC  •  $67,890.12  (▲2.3%)
-  ETH  •  $3,456.78  (▼1.2%)
-  SOL  •  $145.67  (▲0.8%)
-
-🇵🇭  PSE STOCKS
-  BDO  •  ₱145.50  (▲0.5%)
-  SM  •  ₱890.00  (▼0.3%)
-  TEL  •  ₱235.00  (▲1.1%)
-  ALI  •  ₱32.50  (▼0.8%)
-  JFC  •  ₱250.00  (▲0.2%)
-```
-
-### Data Sources
-
-The AI Model Advances feed watches OpenAI/ChatGPT/GPT, Anthropic/Claude, xAI/Grok, DeepSeek, Google/Gemini, Meta/Llama, Mistral, and Qwen/Alibaba for model releases, benchmarks, reasoning, training, inference, upgrades, and capability updates. AI Top Stories remains a separate top-three Google News RSS feed.
-
-| Section | Source | Key Required |
-|---------|--------|-------------|
-| Weather | [Open-Meteo](https://open-meteo.com/) | None |
-| Quote | [ZenQuotes](https://zenquotes.io/) | None |
-| News | [BBC RSS Feed](https://feeds.bbci.co.uk/news/rss.xml) | None |
-| AI Model Advances | [Focused Google News RSS search](https://news.google.com/) | None |
-| AI Top Stories | [Google News RSS search](https://news.google.com/) | None |
-| Model Pricing | [OpenRouter model catalog](https://openrouter.ai/models) | None |
-| Crypto | [yfinance](https://pypi.org/project/yfinance/) | None |
-| PH Stocks | [Twelve Data](https://twelvedata.com/) | TWELVEDATA_API_KEY |
-| Schedule | GitHub Actions cron | None |
-
-Weather, quotes, news, AI news, and model pricing are free with no registration. PH stocks require a free Twelve Data API key. Capability ranks are a curated comparison, while prices are refreshed from OpenRouter's public catalog.
-
-## Project Structure
-
-```
-automations/
-├── .github/workflows/daily-email.yml   # GitHub Actions schedule
-├── .gitignore
-├── requirements.txt                    # yfinance
-├── daily_updates.py                    # Canonical daily brief script
-├── recipients.txt                      # Local ignored recipient list
-├── index.html                          # Landing page (GitHub Pages)
-└── README.md
-```
+Standard GitHub-hosted runners are [free for public repositories](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
+Private repositories have usage allowances. This setup needs no server, database,
+paid AI calls, or automation platform.
 
 ## Setup
 
-### 1. Gmail App Password
-
-This script sends email via Gmail's SMTP server. You need a Gmail account with an **App Password**:
-
-1. Enable [2-Step Verification](https://myaccount.google.com/security) on your Google Account
-2. Go to [App Passwords](https://myaccount.google.com/apppasswords)
-3. Select **Mail** as the app and your device, then click **Generate**
-4. Copy the 16-character password
-
-### 2. (Optional) Twelve Data API Key
-
-For PH stock prices, sign up for a free account at [Twelve Data](https://twelvedata.com/) and get an API key.
-
-### 3. GitHub Secrets
-
-In your GitHub repository, go to **Settings → Secrets and variables → Actions** and add:
-
-| Secret | Value |
-|--------|-------|
-| `SENDER_EMAIL` | Your Gmail address |
-| `SENDER_PASSWORD` | The 16-character app password |
-| `RECIPIENT_EMAILS` | Preferred: one recipient email address per line |
-| `RECEIVER_EMAIL` | Backward-compatible single-recipient fallback |
-| `TWELVEDATA_API_KEY` | (Optional) Twelve Data API key for PH stocks |
-| `NTFY_TOPIC` | Random ntfy.sh topic for failure notifications |
-
-### 4. Enable the Workflow
-
-Push the repo to GitHub. The workflow is already configured to run daily at 2PM PH time. You can also trigger it manually from the Actions tab.
-
-## Local Development
-
-### Preview the email without sending
+Use Python 3.11 or newer. Create an environment and install the pinned dependency:
 
 ```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-python daily_updates.py --dry-run
 ```
 
-This fetches live data and prints the email to your terminal.
+For Gmail, enable two-step verification and create an
+[App Password](https://myaccount.google.com/apppasswords).
+Add these GitHub repository secrets:
 
-### Run with a .env file
+| Secret | Purpose |
+| --- | --- |
+| `SENDER_EMAIL` | Gmail sender address |
+| `SENDER_PASSWORD` | Gmail app password |
+| `RECIPIENT_EMAILS` | One recipient per line |
+| `RECEIVER_EMAIL` | Optional legacy single-recipient fallback |
+| `TWELVEDATA_API_KEY` | Optional PH stock access |
+| `NTFY_TOPIC` | Optional random ntfy topic for workflow failure alerts |
+| `HEALTHCHECKS_PING_URL` | Optional missing-run monitor ping URL |
 
-Create a `.env` file (it's gitignored by default):
+Recipients currently appear together in the email's To header. Use this for a
+personal/trusted group. Locally, a gitignored `recipients.txt` (one address per
+line; comments and blanks ignored) takes priority over environment variables.
 
-```
-SENDER_EMAIL=your.email@gmail.com
-SENDER_PASSWORD=your-app-password
-RECEIVER_EMAIL=you@example.com
-TWELVEDATA_API_KEY=your-twelve-data-key
-```
+The workflow uses a read-only repository token, prevents overlapping runs, and
+has a ten-minute limit. Concurrency is not a once-per-day delivery guarantee:
+manual dispatch or a rerun can send another email.
 
-Then run:
+## Local preview and tests
 
 ```bash
-python daily_updates.py --local
+python daily_updates.py --dry-run        # Fetch live data; print only
+python daily_updates.py --dry-run --pricing  # Include pricing on any day
+python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-This loads variables from `.env` and sends the email.
+For local sending, put credentials in the ignored `.env` file and run
+`python daily_updates.py --local`. A dry run never sends mail.
 
-### Multiple recipients
-
-For local runs, create `recipients.txt` in the repository directory and enter one email address per line:
+Location overrides (workflow environment or local `.env`):
 
 ```text
-# Blank lines and lines beginning with # are ignored.
-first@example.com
-second@example.com
-```
-
-The file is gitignored and preferred when it contains at least one address. For GitHub Actions, put the same newline-separated list in the `RECIPIENT_EMAILS` repository secret; the workflow recreates the ignored file before sending. `RECEIVER_EMAIL` remains available as a single-recipient fallback.
-
-### Change city / coordinates
-
-The default location is Borongan City, Eastern Samar. Override it with environment variables (in GitHub Actions, set them in the workflow; locally, add them to `.env`):
-
-```bash
-CITY="Borongan City, Eastern Samar"
+CITY=Borongan City, Eastern Samar
 LAT=11.6083
 LON=125.4358
 TIMEZONE=Asia/Manila
 ```
 
-`LAT` and `LON` are used for the Open-Meteo weather request; `TIMEZONE` controls the date and time shown in the email.
+Set the optional **repository variable** `AI_MODEL_IDS` (or the same environment
+variable locally) to comma-separated exact OpenRouter IDs. The default watchlist
+is `openai/o3,openai/gpt-4.1-mini,google/gemini-2.5-flash`. These are explicit
+watchlist choices, not a claim that they are the latest or best models. Unknown
+or unpriced IDs are reported. Costs show input/output USD per million tokens and
+an example total for 1M input + 250K output.
 
-## How It Works
+## Failures and monitoring
 
-```
-┌─────────────┐    ┌──────────────────┐    ┌──────────────┐
-│  GitHub      │    │  daily_updates.py│    │  External    │
-│  Actions     │───▶│                  │───▶│  APIs        │
-│  (cron:      │    │  1. Load config  │    │              │
-│   2PM PH)    │    │  2. Fetch data   │    │  • Open-Meteo│
-└─────────────┘    │  3. Build email  │    │  • ZenQuotes │
-                   │  4. Send via     │    │  • BBC RSS   │
-                   │     Gmail SMTP   │    │  • yfinance  │
-                   └────────┬─────────┘    │  • TwelveData│
-                            │              └──────────────┘
-                   ┌────────▼─────────┐
-                   │  Your Inbox      │
-                   └──────────────────┘
-```
+Data requests use bounded timeouts and retries. A failed source does not stop
+other sections. The email footer and GitHub Actions job summary identify missing
+data; the summary also records delivery status. A feed with no new matching
+stories is reported as empty, not as a delivery failure.
 
-### Error Handling
+SMTP has a 30-second timeout. A send failure saves the email to
+`email_fallback_*.txt`, fails the run, and retains that file as a 30-day artifact.
+Partial recipient rejection also fails the run and records refused addresses in
+the fallback. **Do not blindly rerun a partial or ambiguous send:** some recipients
+may already have received it. Check the fallback and logs first.
 
-- **API failures**: Each external API call retries up to 2 times with a 3-second delay before falling back to an error message in the email.
-- **AI Model Advances feed failures**: That section is omitted and the rest of the email still sends.
-- **AI Top Stories feed failures**: That section is omitted independently; model pricing and the rest of the email continue.
-- **Model pricing failures**: The pricing section is omitted; news and market data continue.
-- **Google News link resolution failures**: The item falls back to a compact publisher link when available.
-- **SMTP failures**: If sending fails, the email is saved to `email_fallback_YYYYMMDD_HHMMSS.txt`, the workflow fails, and GitHub Actions retains the fallback as a 30-day artifact.
-- **Workflow failures**: If the GitHub Actions run fails, a push notification is sent via [ntfy.sh](https://ntfy.sh/) using the private `NTFY_TOPIC` secret.
+If `NTFY_TOPIC` is set, failed runs notify that topic. This cannot detect a job
+that never starts. For that, optionally create one free
+[Healthchecks.io](https://healthchecks.io/) check, set a daily 06:17 UTC schedule
+with a two-hour grace period, and save its ping URL as `HEALTHCHECKS_PING_URL`.
+The workflow pings it only after the script reports successful delivery. Missing
+data does not suppress a successful-delivery ping. A ping failure produces a
+warning and does not trigger another email send.
 
-## Requirements
+GitHub warns that [scheduled runs can be delayed or dropped, and public-repository
+schedules disable after 60 days without repository activity](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
+The off-hour-minute schedule reduces contention; an external check catches missed
+runs. Creating/configuring the optional monitor is a separate account setup step.
 
-- Python 3.11
-- [yfinance](https://pypi.org/project/yfinance/) (for crypto prices)
+## Files
 
-## Failure Notifications
-
-On workflow failure, a push notification is sent to the topic stored in `NTFY_TOPIC`. Subscribe on your phone via the [ntfy app](https://ntfy.sh/) or use any ntfy-compatible client.
+- `daily_updates.py`: fetch, format, preview, send, and report.
+- `.github/workflows/daily-email.yml`: daily schedule and optional notifications.
+- `.github/workflows/ci.yml`: unit tests on pushes and pull requests.
+- `tests/test_daily_updates.py`: regression tests without live email delivery.
+- `index.html`: static project page.
