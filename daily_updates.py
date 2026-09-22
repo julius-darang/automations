@@ -427,7 +427,8 @@ a { color:#244ec9; }
 .detail { margin:6px 0; }
 .story-list { margin:0; padding-left:20px; }
 .story-list li { margin:0 0 12px; padding-left:2px; }
-.story-source { display:block; margin:2px 0 4px; color:#52677e; font-size:11px; }
+.story-title { font-weight:600; text-decoration:none; }
+.story-source { display:block; margin:2px 0 0; color:#52677e; font-size:11px; }
 .story-link { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; white-space:nowrap; }
 .market-row { margin:7px 0; font-size:14px; }
 .mail-note { margin:20px 0 0; padding-top:14px; color:#52677e; font-size:11px; }
@@ -459,6 +460,8 @@ def _render_html_content(text: str) -> str:
     parts: list[str] = []
     list_open = False
     section_open = False
+    story_title: str | None = None
+    story_source: str | None = None
 
     def close_list() -> None:
         nonlocal list_open
@@ -466,11 +469,44 @@ def _render_html_content(text: str) -> str:
             parts.append("</ul>")
             list_open = False
 
+    def flush_story(url: str | None = None) -> None:
+        nonlocal list_open, story_title, story_source
+        if story_title is None:
+            return
+        if not list_open:
+            parts.append('<ul class="story-list">')
+            list_open = True
+        title_html = _linkify_html(story_title)
+        if url and "…" not in url:
+            title_html = (
+                f'<a class="story-title" href="{html_lib.escape(url, quote=True)}">'
+                f"{html_lib.escape(story_title)}</a>"
+            )
+        story_html = f"<li>{title_html}"
+        if story_source:
+            story_html += f'<span class="story-source">{_linkify_html(story_source)}</span>'
+        parts.append(story_html + "</li>")
+        story_title = None
+        story_source = None
+
     for line in text.splitlines():
         stripped = line.strip()
         if not stripped or stripped == SEPARATOR:
-            close_list()
+            flush_story()
             continue
+        if stripped.startswith("• "):
+            flush_story()
+            story_title = stripped[2:]
+            story_source = None
+            continue
+        if story_title is not None:
+            if stripped.startswith("Source:"):
+                story_source = stripped
+                continue
+            if _URL_PATTERN.fullmatch(stripped):
+                flush_story(stripped)
+                continue
+            flush_story()
         if stripped.startswith(_EMAIL_HEADING_PREFIXES):
             close_list()
             if section_open:
@@ -478,11 +514,6 @@ def _render_html_content(text: str) -> str:
             parts.append('<section class="mail-section">')
             parts.append(f"<h2>{_linkify_html(stripped)}</h2>")
             section_open = True
-        elif stripped.startswith("• "):
-            if not list_open:
-                parts.append('<ul class="story-list">')
-                list_open = True
-            parts.append(f"<li>{_linkify_html(stripped[2:])}</li>")
         else:
             close_list()
             if stripped.startswith("Source:") or _URL_PATTERN.fullmatch(stripped):
@@ -491,6 +522,7 @@ def _render_html_content(text: str) -> str:
                 parts.append(f'<p class="market-row">{_linkify_html(stripped)}</p>')
             else:
                 parts.append(f'<p class="detail">{_linkify_html(stripped)}</p>')
+    flush_story()
     close_list()
     if section_open:
         parts.append("</section>")
