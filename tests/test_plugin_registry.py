@@ -129,7 +129,8 @@ Missing data: Headlines
         self.assertIn('<main class="mail">', html)
         self.assertIn("Daily Brief", html)
         self.assertIn("AI MODEL ADVANCES", html)
-        self.assertIn('href="https://example.com/article"', html)
+        self.assertIn('<a class="story-title" href="https://example.com/article">A model release</a>', html)
+        self.assertEqual(html.count("https://example.com/article"), 1)
         self.assertNotIn("avatar", html)
         self.assertNotIn("<svg", html)
 
