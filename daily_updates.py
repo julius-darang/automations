@@ -406,37 +406,37 @@ def resolve_plugins(config: PluginFileConfig, selected: str | None = None) -> li
 
 
 _URL_PATTERN = re.compile(r"https?://[^\s<>]+")
-_EMAIL_HEADING_PREFIXES = ("🌤", "💬", "📰", "🤖", "🗞", "💵", "🪙", "📈", "📊")
-_EMAIL_CSS = """
-body { margin:0; padding:24px 12px; background:#eaf1f8; color:#142c49; font:16px/1.6 Arial, Helvetica, sans-serif; }
-a { color:#244ec9; }
-.mail { max-width:620px; margin:0 auto; overflow:hidden; background:#fff; border:1px solid #c5d3e2; border-radius:18px; box-shadow:0 20px 60px -32px #516f93; }
-.mail-top { display:flex; justify-content:space-between; gap:16px; padding:16px 24px; background:#f5f8fc; border-bottom:1px solid #e0e7ef; color:#52677e; font-size:12px; }
-.mail-top strong, .sender strong { color:#142c49; }
-.mail-body { padding:28px 30px; }
-.sender { display:flex; align-items:center; gap:10px; margin-bottom:22px; color:#52677e; font-size:12px; }
-.sender strong { display:block; font-size:13px; }
-.avatar { display:grid; place-items:center; width:34px; height:34px; border-radius:10px; background:#e8eefc; color:#244ec9; font-weight:700; }
-h1 { margin:0 0 4px; font-size:26px; line-height:1.25; letter-spacing:-.6px; }
-.mail-date { margin:0 0 24px; color:#52677e; font-size:12px; }
-.mail-section { margin-top:22px; padding-top:20px; border-top:1px solid #e0e7ef; }
-.section-title { margin:0 0 8px; color:#52677e; font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
-.detail { margin:6px 0; }
-.story-list { margin:0; padding-left:20px; }
-.story-list li { margin:0 0 12px; padding-left:2px; }
-.story-source { display:block; margin:2px 0 4px; color:#52677e; font-size:11px; }
-.story-link { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; white-space:nowrap; }
-.mail-note { margin:22px 0 0; padding-top:14px; border-top:1px solid #e0e7ef; color:#52677e; font-size:11px; }
-.mail-footer { margin-top:24px; color:#52677e; font-size:12px; }
-@media only screen and (max-width:640px) { body { padding:0; } .mail { border:0; border-radius:0; } .mail-body { padding:24px; } }
-"""
 
 
 def _shorten_urls(text: str) -> str:
     return _URL_PATTERN.sub(lambda match: shorten_url(match.group(0)), text)
 
 
-def _linkify_html(text: str, link_class: str = "story-link") -> str:
+_EMAIL_HEADING_PREFIXES = ("🌤", "💬", "📰", "🤖", "🗞", "💵", "🪙", "📈", "📊")
+_EMAIL_CSS = """
+body { margin:0; padding:24px 12px; background:#eaf1f8; color:#142c49; font:16px/1.6 Arial, Helvetica, sans-serif; }
+a { color:#244ec9; }
+.mail { max-width:620px; margin:0 auto; background:#fff; border:1px solid #c5d3e2; border-radius:16px; overflow:hidden; }
+.mail-header { padding:28px 32px 22px; border-bottom:1px solid #e0e7ef; }
+.mail-header h1 { margin:0; font-size:26px; line-height:1.2; letter-spacing:-.6px; }
+.mail-date { margin:6px 0 0; color:#52677e; font-size:12px; }
+.mail-content { padding:4px 32px 28px; }
+.greeting { margin:20px 0 4px; font-size:17px; }
+.mail-section { padding:20px 0; border-bottom:1px solid #e0e7ef; }
+.mail-section h2 { margin:0 0 10px; color:#52677e; font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+.detail { margin:6px 0; }
+.story-list { margin:0; padding-left:20px; }
+.story-list li { margin:0 0 12px; padding-left:2px; }
+.story-source { display:block; margin:2px 0 4px; color:#52677e; font-size:11px; }
+.story-link { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; white-space:nowrap; }
+.market-row { margin:7px 0; font-size:14px; }
+.mail-note { margin:20px 0 0; padding-top:14px; color:#52677e; font-size:11px; }
+.mail-footer { padding:0 32px 28px; color:#52677e; font-size:12px; }
+@media only screen and (max-width:640px) { body { padding:0; } .mail { border:0; border-radius:0; } .mail-header, .mail-content { padding-left:24px; padding-right:24px; } .mail-footer { padding-left:24px; padding-right:24px; } }
+"""
+
+
+def _linkify_html(text: str) -> str:
     parts: list[str] = []
     cursor = 0
     for match in _URL_PATTERN.finditer(text):
@@ -446,49 +446,54 @@ def _linkify_html(text: str, link_class: str = "story-link") -> str:
         parts.append(html_lib.escape(text[cursor:match.start()]))
         if "…" in url:
             parts.append(html_lib.escape(url))
-        elif url:
+        else:
             escaped_url = html_lib.escape(url, quote=True)
-            parts.append(
-                f'<a class="{link_class}" href="{escaped_url}">'
-                f"{html_lib.escape(url)}</a>"
-            )
+            parts.append(f'<a class="story-link" href="{escaped_url}">{html_lib.escape(url)}</a>')
         parts.append(html_lib.escape(trailing))
         cursor = match.end()
     parts.append(html_lib.escape(text[cursor:]))
     return "".join(parts)
 
 
-def _render_text_fragment(text: str) -> str:
+def _render_html_content(text: str) -> str:
     parts: list[str] = []
     list_open = False
+    section_open = False
+
+    def close_list() -> None:
+        nonlocal list_open
+        if list_open:
+            parts.append("</ul>")
+            list_open = False
+
     for line in text.splitlines():
         stripped = line.strip()
         if not stripped or stripped == SEPARATOR:
-            if list_open:
-                parts.append("</ul>")
-                list_open = False
+            close_list()
             continue
-        if stripped.startswith("• "):
+        if stripped.startswith(_EMAIL_HEADING_PREFIXES):
+            close_list()
+            if section_open:
+                parts.append("</section>")
+            parts.append('<section class="mail-section">')
+            parts.append(f"<h2>{_linkify_html(stripped)}</h2>")
+            section_open = True
+        elif stripped.startswith("• "):
             if not list_open:
                 parts.append('<ul class="story-list">')
                 list_open = True
             parts.append(f"<li>{_linkify_html(stripped[2:])}</li>")
-            continue
-        if list_open:
-            parts.append("</ul>")
-            list_open = False
-        if stripped.startswith(_EMAIL_HEADING_PREFIXES):
-            parts.append(f'<h2 class="section-title">{_linkify_html(stripped)}</h2>')
-        elif stripped.startswith("Source:"):
-            parts.append(f'<span class="story-source">{_linkify_html(stripped)}</span>')
-        elif _URL_PATTERN.fullmatch(stripped):
-            parts.append(f'<span class="story-source">{_linkify_html(stripped)}</span>')
-        elif " • " in stripped:
-            parts.append(f'<p class="market-row">{_linkify_html(stripped)}</p>')
         else:
-            parts.append(f'<p class="detail">{_linkify_html(stripped)}</p>')
-    if list_open:
-        parts.append("</ul>")
+            close_list()
+            if stripped.startswith("Source:") or _URL_PATTERN.fullmatch(stripped):
+                parts.append(f'<span class="story-source">{_linkify_html(stripped)}</span>')
+            elif " • " in stripped:
+                parts.append(f'<p class="market-row">{_linkify_html(stripped)}</p>')
+            else:
+                parts.append(f'<p class="detail">{_linkify_html(stripped)}</p>')
+    close_list()
+    if section_open:
+        parts.append("</section>")
     return "\n".join(parts)
 
 
@@ -502,50 +507,47 @@ def _email_document(
     if missing:
         labels = html_lib.escape("; ".join(missing))
         missing_html = f'<p class="mail-note"><strong>Missing data:</strong> {labels}</p>'
-    safe_subject = html_lib.escape(subject or "Daily Brief")
-    safe_date = html_lib.escape(date_text)
-    date_html = f'<p class="mail-date">{safe_date}</p>' if safe_date else ""
-    return f"""<!DOCTYPE html>
+    date_html = f'<p class="mail-date">{html_lib.escape(date_text)}</p>' if date_text else ""
+    return f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{safe_subject}</title>
+  <title>{html_lib.escape(subject or "Daily Brief")}</title>
   <style>{_EMAIL_CSS}</style>
 </head>
 <body>
-  <div class="mail" role="article" aria-label="Daily Brief">
-    <div class="mail-top"><strong>✉ Daily Brief</strong><span>Personal afternoon update</span></div>
-    <div class="mail-body">
-      <div class="sender"><div class="avatar">DB</div><div><strong>Your Daily Brief</strong><span>To you</span></div></div>
-      <h1>Good afternoon!</h1>
+  <main class="mail">
+    <header class="mail-header">
+      <h1>Daily Brief</h1>
       {date_html}
+    </header>
+    <div class="mail-content">
+      <p class="greeting">Good afternoon!</p>
       {content}
       {missing_html}
-      <div class="mail-footer">— Your Agent</div>
     </div>
-  </div>
+    <footer class="mail-footer">— Your Agent</footer>
+  </main>
 </body>
 </html>"""
 
 
 def build_html_email(body: str, subject: str = "Daily Brief") -> str:
-    """Build a styled HTML alternative for legacy/plain-text callers."""
     date_text = ""
     missing: list[str] = []
     content_lines: list[str] = []
     for line in body.splitlines():
         stripped = line.strip()
-        if stripped == "Good afternoon!" or stripped == "— Your Agent" or stripped == SEPARATOR:
+        if stripped in {"Good afternoon!", "— Your Agent", SEPARATOR}:
             continue
         if stripped.startswith("📅"):
             date_text = stripped.removeprefix("📅").strip()
-            continue
-        if stripped.startswith("Missing data:"):
+        elif stripped.startswith("Missing data:"):
             missing = [item.strip() for item in stripped.removeprefix("Missing data:").split(";") if item.strip()]
-            continue
-        content_lines.append(line)
-    return _email_document(subject, date_text, _render_text_fragment("\n".join(content_lines)), missing)
+        else:
+            content_lines.append(line)
+    return _email_document(subject, date_text, _render_html_content("\n".join(content_lines)), missing)
 
 
 def build_plugin_body(

@@ -105,7 +105,7 @@ class RegistryTests(unittest.TestCase):
         self.assertLess(body.index("STOCKS"), body.index("HEADLINES"))
         self.assertIn("Missing data: Weather", body)
 
-    def test_html_email_matches_simple_mail_structure(self):
+    def test_html_email_is_simple_and_has_no_logo(self):
         body = """Good afternoon!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -120,17 +120,18 @@ Clear sky ☀️ | 27.0°C | Humidity: 80%
 🤖  AI MODEL ADVANCES
   • A model release
     Source: OpenAI
-    https://news.google.com/rss/articles/""" + "x" * 120 + "?oc=5" + """
+    https://example.com/article
 
 Missing data: Headlines
 
 — Your Agent"""
         html = daily_updates.build_html_email(body, "Daily Brief — Monday")
-        self.assertIn('class="mail"', html)
-        self.assertIn("WEATHER — Test City", html)
+        self.assertIn('<main class="mail">', html)
+        self.assertIn("Daily Brief", html)
         self.assertIn("AI MODEL ADVANCES", html)
-        self.assertIn('href="https://news.google.com/rss/articles/', html)
-        self.assertIn("Missing data:", html)
+        self.assertIn('href="https://example.com/article"', html)
+        self.assertNotIn("avatar", html)
+        self.assertNotIn("<svg", html)
 
     def test_plugin_flag_requires_dry_run(self):
         with patch.object(sys, "argv", ["daily_updates.py", "--plugin", "quote"]):
