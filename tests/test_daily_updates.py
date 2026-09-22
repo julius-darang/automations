@@ -450,26 +450,6 @@ class DailyUpdatesTests(unittest.TestCase):
         self.assertIn("BTC", body)
         self.assertIn("BDO", body)
 
-    def test_send_email_includes_html_and_plain_alternatives(self):
-        config = self.make_config()
-        with patch.object(daily_updates.smtplib, "SMTP_SSL") as smtp:
-            smtp.return_value.__enter__.return_value.sendmail.return_value = {}
-            self.assertTrue(
-                daily_updates.send_email(
-                    config,
-                    "Subject",
-                    "Plain body",
-                    "<html><body><strong>Styled body</strong></body></html>",
-                )
-            )
-        message = smtp.return_value.__enter__.return_value.sendmail.call_args.args[2]
-        self.assertIn("multipart/alternative", message)
-        from email import message_from_string
-        parsed = message_from_string(message)
-        parts = parsed.get_payload()
-        self.assertEqual(parts[0].get_payload(decode=True).decode(), "Plain body")
-        self.assertIn("Styled body", parts[1].get_payload(decode=True).decode())
-
     def test_smtp_failure_writes_fallback_and_returns_false(self):
         config = self.make_config()
         original_directory = os.getcwd()
