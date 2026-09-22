@@ -19,7 +19,7 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(
             set(discover_plugins()),
             {
-                "weather", "quote", "headlines", "hackernews", "lobsters", "devto",
+                "weather", "quote", "headlines", "hackernews", "lobsters", "devto", "arxiv",
                 "ai_pricing", "crypto", "ph_stocks",
             },
         )

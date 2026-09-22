@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from plugins.ai_pricing import AIPricingPlugin, AI_GENERAL_NEWS_FEED_URL, AI_MODEL_NEWS_FEED_URL  # noqa: E402
+from plugins.arxiv import ArxivPlugin  # noqa: E402
 from plugins.base import PluginContext  # noqa: E402
 from plugins.crypto import CryptoPlugin, MarketQuote  # noqa: E402
 from plugins.formatting import shorten_url  # noqa: E402
@@ -47,6 +48,23 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_arxiv_normalizes_authors_and_abstract(self):
+        xml = """<feed xmlns="http://www.w3.org/2005/Atom">
+          <entry>
+            <id>https://arxiv.org/abs/1234.5678</id>
+            <title>A useful paper</title>
+            <author><name>First Author</name></author>
+            <author><name>Second Author</name></author>
+            <summary>A short abstract for the paper.</summary>
+          </entry>
+        </feed>"""
+        result = ArxivPlugin().fetch(self.context(text_response=xml))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "A useful paper")
+        self.assertIn("Authors: First Author, Second Author", result.data[0].details)
+        self.assertIn("Abstract: A short abstract", result.data[0].details[1])
+        self.assertIn("https://arxiv.org/abs/1234.5678", ArxivPlugin().render(result.data))
 
     def test_lobsters_normalizes_ranked_items(self):
         context = self.context(text_response=(
