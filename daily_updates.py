@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import html as html_lib
 import re
 import os
 import smtplib
@@ -411,6 +412,144 @@ def _shorten_urls(text: str) -> str:
     return _URL_PATTERN.sub(lambda match: shorten_url(match.group(0)), text)
 
 
+_EMAIL_HEADING_PREFIXES = ("🌤", "💬", "📰", "🤖", "🗞", "💵", "🪙", "📈", "📊")
+_EMAIL_CSS = """
+body { margin:0; padding:24px 12px; background:#eaf1f8; color:#142c49; font:16px/1.6 Arial, Helvetica, sans-serif; }
+a { color:#244ec9; }
+.mail { max-width:620px; margin:0 auto; background:#fff; border:1px solid #c5d3e2; border-radius:16px; overflow:hidden; }
+.mail-header { padding:28px 32px 22px; border-bottom:1px solid #e0e7ef; }
+.mail-header h1 { margin:0; font-size:26px; line-height:1.2; letter-spacing:-.6px; }
+.mail-date { margin:6px 0 0; color:#52677e; font-size:12px; }
+.mail-content { padding:4px 32px 28px; }
+.greeting { margin:20px 0 4px; font-size:17px; }
+.mail-section { padding:20px 0; border-bottom:1px solid #e0e7ef; }
+.mail-section h2 { margin:0 0 10px; color:#52677e; font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+.detail { margin:6px 0; }
+.story-list { margin:0; padding-left:20px; }
+.story-list li { margin:0 0 12px; padding-left:2px; }
+.story-source { display:block; margin:2px 0 4px; color:#52677e; font-size:11px; }
+.story-link { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; white-space:nowrap; }
+.market-row { margin:7px 0; font-size:14px; }
+.mail-note { margin:20px 0 0; padding-top:14px; color:#52677e; font-size:11px; }
+.mail-footer { padding:0 32px 28px; color:#52677e; font-size:12px; }
+@media only screen and (max-width:640px) { body { padding:0; } .mail { border:0; border-radius:0; } .mail-header, .mail-content { padding-left:24px; padding-right:24px; } .mail-footer { padding-left:24px; padding-right:24px; } }
+"""
+
+
+def _linkify_html(text: str) -> str:
+    parts: list[str] = []
+    cursor = 0
+    for match in _URL_PATTERN.finditer(text):
+        raw_url = match.group(0)
+        url = raw_url.rstrip(".,;:)")
+        trailing = raw_url[len(url):]
+        parts.append(html_lib.escape(text[cursor:match.start()]))
+        if "…" in url:
+            parts.append(html_lib.escape(url))
+        else:
+            escaped_url = html_lib.escape(url, quote=True)
+            parts.append(f'<a class="story-link" href="{escaped_url}">{html_lib.escape(url)}</a>')
+        parts.append(html_lib.escape(trailing))
+        cursor = match.end()
+    parts.append(html_lib.escape(text[cursor:]))
+    return "".join(parts)
+
+
+def _render_html_content(text: str) -> str:
+    parts: list[str] = []
+    list_open = False
+    section_open = False
+
+    def close_list() -> None:
+        nonlocal list_open
+        if list_open:
+            parts.append("</ul>")
+            list_open = False
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped == SEPARATOR:
+            close_list()
+            continue
+        if stripped.startswith(_EMAIL_HEADING_PREFIXES):
+            close_list()
+            if section_open:
+                parts.append("</section>")
+            parts.append('<section class="mail-section">')
+            parts.append(f"<h2>{_linkify_html(stripped)}</h2>")
+            section_open = True
+        elif stripped.startswith("• "):
+            if not list_open:
+                parts.append('<ul class="story-list">')
+                list_open = True
+            parts.append(f"<li>{_linkify_html(stripped[2:])}</li>")
+        else:
+            close_list()
+            if stripped.startswith("Source:") or _URL_PATTERN.fullmatch(stripped):
+                parts.append(f'<span class="story-source">{_linkify_html(stripped)}</span>')
+            elif " • " in stripped:
+                parts.append(f'<p class="market-row">{_linkify_html(stripped)}</p>')
+            else:
+                parts.append(f'<p class="detail">{_linkify_html(stripped)}</p>')
+    close_list()
+    if section_open:
+        parts.append("</section>")
+    return "\n".join(parts)
+
+
+def _email_document(
+    subject: str,
+    date_text: str,
+    content: str,
+    missing: list[str] | tuple[str, ...] | None = None,
+) -> str:
+    missing_html = ""
+    if missing:
+        labels = html_lib.escape("; ".join(missing))
+        missing_html = f'<p class="mail-note"><strong>Missing data:</strong> {labels}</p>'
+    date_html = f'<p class="mail-date">{html_lib.escape(date_text)}</p>' if date_text else ""
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html_lib.escape(subject or "Daily Brief")}</title>
+  <style>{_EMAIL_CSS}</style>
+</head>
+<body>
+  <main class="mail">
+    <header class="mail-header">
+      <h1>Daily Brief</h1>
+      {date_html}
+    </header>
+    <div class="mail-content">
+      <p class="greeting">Good afternoon!</p>
+      {content}
+      {missing_html}
+    </div>
+    <footer class="mail-footer">— Your Agent</footer>
+  </main>
+</body>
+</html>"""
+
+
+def build_html_email(body: str, subject: str = "Daily Brief") -> str:
+    date_text = ""
+    missing: list[str] = []
+    content_lines: list[str] = []
+    for line in body.splitlines():
+        stripped = line.strip()
+        if stripped in {"Good afternoon!", "— Your Agent", SEPARATOR}:
+            continue
+        if stripped.startswith("📅"):
+            date_text = stripped.removeprefix("📅").strip()
+        elif stripped.startswith("Missing data:"):
+            missing = [item.strip() for item in stripped.removeprefix("Missing data:").split(";") if item.strip()]
+        else:
+            content_lines.append(line)
+    return _email_document(subject, date_text, _render_html_content("\n".join(content_lines)), missing)
+
+
 def build_plugin_body(
     cfg: Config,
     day_str: str,
@@ -501,12 +640,18 @@ def build_body(
     return "\n".join(parts)
 
 
-def send_email(cfg: Config, subject: str, body: str) -> bool:
-    msg = MIMEMultipart()
+def send_email(
+    cfg: Config,
+    subject: str,
+    body: str,
+    html_body: str | None = None,
+) -> bool:
+    msg = MIMEMultipart("alternative")
     msg["From"] = cfg.sender_email
     msg["To"] = ", ".join(cfg.recipients)
     msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain"))
+    msg.attach(MIMEText(body, "plain", "utf-8"))
+    msg.attach(MIMEText(html_body or build_html_email(body, subject), "html", "utf-8"))
 
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as server:
@@ -580,8 +725,10 @@ def main() -> None:
         force_pricing=args.pricing,
     )
     blocks, missing = run_plugins(plugins, context)
-    body = _shorten_urls(build_plugin_body(cfg, day_str, date_str, blocks, missing))
+    raw_body = build_plugin_body(cfg, day_str, date_str, blocks, missing)
     subject = f"Daily Brief & Market Update — {day_str}, {date_str}"
+    body = _shorten_urls(raw_body)
+    html_body = build_html_email(raw_body, subject)
 
     if args.dry_run:
         print(f"\n{'=' * 60}")
@@ -591,7 +738,7 @@ def main() -> None:
         write_run_summary(missing, "Preview — not sent")
         return
 
-    delivered = send_email(cfg, subject, body)
+    delivered = send_email(cfg, subject, body, html_body)
     write_run_summary(
         missing,
         "Sent (SMTP accepted all recipients)" if delivered
