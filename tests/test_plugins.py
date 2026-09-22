@@ -12,6 +12,7 @@ from plugins.ai_pricing import AIPricingPlugin, AI_GENERAL_NEWS_FEED_URL, AI_MOD
 from plugins.base import PluginContext  # noqa: E402
 from plugins.crypto import CryptoPlugin, MarketQuote  # noqa: E402
 from plugins.formatting import shorten_url  # noqa: E402
+from plugins.hackernews import HackerNewsPlugin, HN_ITEM_URL, HN_TOP_STORIES_URL  # noqa: E402
 from plugins.headlines import HeadlinesPlugin  # noqa: E402
 from plugins.ph_stocks import PHStocksPlugin  # noqa: E402
 from plugins.quote import QuotePlugin  # noqa: E402
@@ -44,6 +45,29 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_hackernews_normalizes_ranked_items(self):
+        payloads = {
+            HN_TOP_STORIES_URL: [101, 102],
+            HN_ITEM_URL.format(story_id=101): {
+                "type": "story",
+                "title": "First story",
+                "url": "https://example.com/first",
+                "score": 42,
+            },
+            HN_ITEM_URL.format(story_id=102): {
+                "type": "story",
+                "title": "Second story",
+                "score": 10,
+            },
+        }
+        context = self.context(json_response=lambda url: payloads[url])
+        result = HackerNewsPlugin().fetch(context)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "First story")
+        self.assertEqual(result.data[0].details, ("Score: 42",))
+        self.assertIn("HACKER NEWS", HackerNewsPlugin().render(result.data))
+        self.assertIn("news.ycombinator.com/item?id=102", result.data[1].link)
 
     def test_weather_fetch_and_render(self):
         context = self.context(json_response={
