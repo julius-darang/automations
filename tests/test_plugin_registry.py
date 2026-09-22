@@ -105,6 +105,34 @@ class RegistryTests(unittest.TestCase):
         self.assertLess(body.index("STOCKS"), body.index("HEADLINES"))
         self.assertIn("Missing data: Weather", body)
 
+    def test_plugin_html_body_matches_mail_preview_structure(self):
+        blocks = [
+            daily_updates.PluginBlock(
+                "weather",
+                "Weather",
+                "🌤  WEATHER — Test City\nClear sky ☀️ | 27.0°C | Humidity: 80% | Wind: 3 km/h",
+            ),
+            daily_updates.PluginBlock(
+                "ai_pricing",
+                "AI updates",
+                "🤖  AI MODEL ADVANCES\n━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "  • A model release\n    Source: OpenAI\n"
+                "    https://news.google.com/rss/articles/" + "x" * 120 + "?oc=5",
+            ),
+        ]
+        html = daily_updates.build_plugin_html_body(
+            daily_updates.Config("", "", (), city="Test City"),
+            "Monday",
+            "September 21, 2026",
+            blocks,
+            ["Headlines"],
+        )
+        self.assertIn('class="mail"', html)
+        self.assertIn('class="weather"', html)
+        self.assertIn("AI MODEL ADVANCES", html)
+        self.assertIn('href="https://news.google.com/rss/articles/', html)
+        self.assertIn("Missing data:", html)
+
     def test_plugin_flag_requires_dry_run(self):
         with patch.object(sys, "argv", ["daily_updates.py", "--plugin", "quote"]):
             with self.assertRaises(SystemExit) as error:

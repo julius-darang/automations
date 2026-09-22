@@ -14,7 +14,7 @@ from urllib.parse import quote_plus
 from zoneinfo import ZoneInfo
 
 from .base import BasePlugin, FetchResult, PluginContext
-from .formatting import SEPARATOR, shorten_url
+from .formatting import SEPARATOR
 
 
 AI_MODEL_NEWS_QUERY = (
@@ -107,7 +107,7 @@ def get_google_news(
             block = [f"  • {title}"]
             if source:
                 block.append(f"    Source: {source}")
-            block.append(f"    {shorten_url(link)}")
+            block.append(f"    {link}")
             blocks.append("\n".join(block))
             if len(blocks) == AI_NEWS_LIMIT:
                 break
