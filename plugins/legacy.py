@@ -35,6 +35,7 @@ from .crypto import (
     fetch_crypto_prices,
     yf,
 )
+from .formatting import render_quote, render_ranked_list
 from .headlines import HeadlinesPlugin
 from .ph_stocks import (
     STOCK_ORDER,
@@ -51,7 +52,7 @@ def get_weather(context: PluginContext) -> str:
     plugin = WeatherPlugin()
     result = plugin.fetch(context)
     if result.ok:
-        return result.data["text"]
+        return plugin.render(result.data).split("\n", 1)[1]
     return f"Weather unavailable ({result.error})"
 
 
@@ -60,13 +61,13 @@ def get_quote(context: PluginContext) -> str:
     result = plugin.fetch(context)
     if result.ok:
         data = result.data
-        return f'"{data["quote"]}"\n— {data["author"]}\nSource: https://zenquotes.io/'
+        return f"{render_quote(data['quote'], data['author'])}\nSource: https://zenquotes.io/"
     return f"Quote unavailable ({result.error})"
 
 
 def get_news(context: PluginContext) -> str | None:
     result = HeadlinesPlugin().fetch(context)
-    return result.data if result.ok else None
+    return render_ranked_list(result.data, max_results=3) if result.ok else None
 
 
 def get_ai_news(context: PluginContext, seen: set[str] | None = None) -> str | None:

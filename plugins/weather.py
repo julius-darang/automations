@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .base import BasePlugin, FetchResult, PluginContext
-from .formatting import section
+from .formatting import KeyValue, render_kv, section
 
 
 WEATHER_MAP = {
@@ -33,11 +33,11 @@ class WeatherPlugin(BasePlugin):
             code = current["weathercode"]
             data = {
                 "city": context.city,
-                "text": (
-                    f"{WEATHER_MAP.get(code, 'Unknown')} | "
-                    f"{current['temperature_2m']}°C | "
-                    f"Humidity: {current['relative_humidity_2m']}% | "
-                    f"Wind: {current['windspeed_10m']} km/h"
+                "condition": WEATHER_MAP.get(code, "Unknown"),
+                "values": (
+                    KeyValue("", current["temperature_2m"], "°C"),
+                    KeyValue("Humidity", current["relative_humidity_2m"], "%"),
+                    KeyValue("Wind", current["windspeed_10m"], " km/h"),
                 ),
             }
             return FetchResult(ok=True, data=data)
@@ -46,4 +46,5 @@ class WeatherPlugin(BasePlugin):
             return FetchResult(ok=False, error=str(error))
 
     def render(self, data: dict) -> str:
-        return section(f"🌤  WEATHER — {data['city']}", data["text"])
+        values = " | ".join(render_kv(item.label, item.value, item.unit) for item in data["values"])
+        return section(f"🌤  WEATHER — {data['city']}", f"{data['condition']} | {values}")

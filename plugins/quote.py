@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .base import BasePlugin, FetchResult, PluginContext
-from .formatting import section
+from .formatting import render_quote, section
 
 
 class QuotePlugin(BasePlugin):
@@ -24,5 +24,5 @@ class QuotePlugin(BasePlugin):
             return FetchResult(ok=False, error=str(error))
 
     def render(self, data: dict) -> str:
-        body = f'"{data["quote"]}"\n— {data["author"]}\nSource: https://zenquotes.io/'
-        return section("💬  QUOTE OF THE DAY", body)
+        body = render_quote(data["quote"], data["author"])
+        return section("💬  QUOTE OF THE DAY", f"{body}\nSource: https://zenquotes.io/")

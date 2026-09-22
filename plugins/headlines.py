@@ -5,7 +5,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 from .base import BasePlugin, FetchResult, PluginContext
-from .formatting import section
+from .formatting import RankedItem, render_ranked_list, section
 
 
 class HeadlinesPlugin(BasePlugin):
@@ -20,21 +20,24 @@ class HeadlinesPlugin(BasePlugin):
                 context.retry_delay,
             )
             root = ET.fromstring(xml_text)
-            items = root.findall(".//item")[:3]
+            items: list[RankedItem] = []
+            for item in root.findall(".//item"):
+                title = " ".join((item.findtext("title") or "").split())
+                link = (item.findtext("link") or "").strip()
+                if not title:
+                    continue
+                source_element = item.find("source")
+                source = " ".join((source_element.text or "").split()) if source_element is not None else ""
+                details = (f"Source: {source}",) if source else ()
+                items.append(RankedItem(title=title, link=link, details=details))
+                if len(items) == 3:
+                    break
             if not items:
                 return FetchResult(ok=False, error="feed returned no headlines")
-
-            lines: list[str] = []
-            for item in items:
-                title = item.findtext("title", "")
-                lines.append(f"  • {title}")
-                link = (item.findtext("link") or "").strip()
-                if link:
-                    lines.append(f"    {link}")
-            return FetchResult(ok=True, data="\n" + "\n".join(lines))
+            return FetchResult(ok=True, data=items)
         except Exception as error:
             print(f"  ⚠ Headlines unavailable: {error}")
             return FetchResult(ok=False, error=str(error))
 
-    def render(self, data: str) -> str:
-        return section("📰  HEADLINES", data)
+    def render(self, data: list[RankedItem]) -> str:
+        return section("📰  HEADLINES", render_ranked_list(data, max_results=3))
