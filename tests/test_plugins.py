@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT))
 from plugins.ai_pricing import AIPricingPlugin, AI_GENERAL_NEWS_FEED_URL, AI_MODEL_NEWS_FEED_URL  # noqa: E402
 from plugins.base import PluginContext  # noqa: E402
 from plugins.crypto import CryptoPlugin, MarketQuote  # noqa: E402
+from plugins.formatting import shorten_url  # noqa: E402
 from plugins.headlines import HeadlinesPlugin  # noqa: E402
 from plugins.ph_stocks import PHStocksPlugin  # noqa: E402
 from plugins.quote import QuotePlugin  # noqa: E402
@@ -77,6 +78,13 @@ class PluginTests(unittest.TestCase):
         headlines_result = headlines.fetch(headlines_context)
         self.assertTrue(headlines_result.ok)
         self.assertIn("https://example.com/1", headlines.render(headlines_result.data))
+
+    def test_ai_links_are_shortened_for_readable_email(self):
+        long_url = "https://news.google.com/rss/articles/" + ("token" * 30) + "?oc=5"
+        shortened = shorten_url(long_url)
+        self.assertLessEqual(len(shortened), 72)
+        self.assertTrue(shortened.startswith("https://news.google.com/"))
+        self.assertTrue(shortened.endswith("…?oc=5"))
 
     def test_ai_plugin_deduplicates_feeds_and_honors_schedule(self):
         rss = {
