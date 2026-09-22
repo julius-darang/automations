@@ -406,23 +406,19 @@ def resolve_plugins(config: PluginFileConfig, selected: str | None = None) -> li
 
 
 _URL_PATTERN = re.compile(r"https?://[^\s<>]+")
-_EMAIL_HEADING_PREFIXES = ("🌤", "💬", "📰", "🤖", "🗞", "💵", "🪙", "📊")
+_EMAIL_HEADING_PREFIXES = ("🌤", "💬", "📰", "🤖", "🗞", "💵", "🪙", "📈", "📊")
 _EMAIL_CSS = """
-body { margin:0; padding:24px 12px; background:#eaf1f8; color:#142c49; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:1.6; }
+body { margin:0; padding:24px 12px; background:#eaf1f8; color:#142c49; font:16px/1.6 Arial, Helvetica, sans-serif; }
 a { color:#244ec9; }
-.mail { max-width:620px; margin:0 auto; background:#ffffff; border:1px solid #c5d3e2; border-radius:18px; overflow:hidden; box-shadow:0 20px 60px -32px #516f93; }
+.mail { max-width:620px; margin:0 auto; overflow:hidden; background:#fff; border:1px solid #c5d3e2; border-radius:18px; box-shadow:0 20px 60px -32px #516f93; }
 .mail-top { display:flex; justify-content:space-between; gap:16px; padding:16px 24px; background:#f5f8fc; border-bottom:1px solid #e0e7ef; color:#52677e; font-size:12px; }
-.mail-top strong { color:#142c49; }
+.mail-top strong, .sender strong { color:#142c49; }
 .mail-body { padding:28px 30px; }
 .sender { display:flex; align-items:center; gap:10px; margin-bottom:22px; color:#52677e; font-size:12px; }
-.sender strong { display:block; color:#142c49; font-size:13px; }
+.sender strong { display:block; font-size:13px; }
 .avatar { display:grid; place-items:center; width:34px; height:34px; border-radius:10px; background:#e8eefc; color:#244ec9; font-weight:700; }
-h1 { margin:0 0 4px; color:#142c49; font-size:26px; line-height:1.25; letter-spacing:-.6px; }
+h1 { margin:0 0 4px; font-size:26px; line-height:1.25; letter-spacing:-.6px; }
 .mail-date { margin:0 0 24px; color:#52677e; font-size:12px; }
-.weather { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:16px 18px; border-radius:10px; background:#eff5fc; }
-.weather strong { display:block; font-size:14px; }
-.weather span { display:block; color:#52677e; font-size:12px; }
-.temperature { color:#142c49; font-size:34px; font-weight:600; letter-spacing:-1.5px; white-space:nowrap; }
 .mail-section { margin-top:22px; padding-top:20px; border-top:1px solid #e0e7ef; }
 .section-title { margin:0 0 8px; color:#52677e; font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
 .detail { margin:6px 0; }
@@ -430,7 +426,6 @@ h1 { margin:0 0 4px; color:#142c49; font-size:26px; line-height:1.25; letter-spa
 .story-list li { margin:0 0 12px; padding-left:2px; }
 .story-source { display:block; margin:2px 0 4px; color:#52677e; font-size:11px; }
 .story-link { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; white-space:nowrap; }
-.market-row { margin:7px 0; font-size:14px; }
 .mail-note { margin:22px 0 0; padding-top:14px; border-top:1px solid #e0e7ef; color:#52677e; font-size:11px; }
 .mail-footer { margin-top:24px; color:#52677e; font-size:12px; }
 @media only screen and (max-width:640px) { body { padding:0; } .mail { border:0; border-radius:0; } .mail-body { padding:24px; } }
@@ -449,7 +444,9 @@ def _linkify_html(text: str, link_class: str = "story-link") -> str:
         url = raw_url.rstrip(".,;:)")
         trailing = raw_url[len(url):]
         parts.append(html_lib.escape(text[cursor:match.start()]))
-        if url:
+        if "…" in url:
+            parts.append(html_lib.escape(url))
+        elif url:
             escaped_url = html_lib.escape(url, quote=True)
             parts.append(
                 f'<a class="{link_class}" href="{escaped_url}">'
@@ -495,29 +492,6 @@ def _render_text_fragment(text: str) -> str:
     return "\n".join(parts)
 
 
-def _render_weather_html(text: str) -> str:
-    lines = [line.strip() for line in text.splitlines() if line.strip() and line.strip() != SEPARATOR]
-    heading = lines[0] if lines else "🌤 WEATHER"
-    city = heading.split("—", 1)[1].strip() if "—" in heading else heading
-    detail = lines[1] if len(lines) > 1 else "Weather unavailable"
-    detail_parts = [part.strip() for part in detail.split("|")]
-    temperature = next((part for part in detail_parts if "°C" in part), "—")
-    metadata = " · ".join(part for part in detail_parts if part != temperature)
-    return (
-        '<div class="weather">'
-        f"<div><strong>{html_lib.escape(city)}</strong>"
-        f"<span>{_linkify_html(metadata or detail)}</span></div>"
-        f'<div class="temperature">{html_lib.escape(temperature)}</div>'
-        "</div>"
-    )
-
-
-def _render_block_html(block: PluginBlock) -> str:
-    if block.name == "weather":
-        return _render_weather_html(block.text)
-    return f'<section class="mail-section">{_render_text_fragment(block.text)}</section>'
-
-
 def _email_document(
     subject: str,
     date_text: str,
@@ -553,38 +527,6 @@ def _email_document(
   </div>
 </body>
 </html>"""
-
-
-def build_plugin_html_body(
-    cfg: Config,
-    day_str: str,
-    date_str: str,
-    blocks: list[PluginBlock],
-    missing: list[str] | None = None,
-) -> str:
-    content: list[str] = []
-    index = 0
-    while index < len(blocks):
-        block = blocks[index]
-        if block.group == "market":
-            market_blocks: list[PluginBlock] = []
-            while index < len(blocks) and blocks[index].group == "market":
-                market_blocks.append(blocks[index])
-                index += 1
-            market_parts = ['<section class="mail-section"><h2 class="section-title">📈 MARKET UPDATE</h2>']
-            for market_block in market_blocks:
-                market_parts.append(f'<div class="market-block">{_render_text_fragment(market_block.text)}</div>')
-            market_parts.append("</section>")
-            content.append("\n".join(market_parts))
-            continue
-        content.append(_render_block_html(block))
-        index += 1
-    return _email_document(
-        f"Daily Brief — {day_str}, {date_str}",
-        f"{day_str}, {date_str}",
-        "\n".join(content),
-        missing,
-    )
 
 
 def build_html_email(body: str, subject: str = "Daily Brief") -> str:
@@ -634,13 +576,13 @@ def build_plugin_body(
             else:
                 parts += ["", "📈  MARKET UPDATE", SEPARATOR]
             for market_block in market_blocks:
-                parts += ["", _shorten_urls(market_block.text)]
+                parts += ["", market_block.text]
             has_content = True
             continue
         if has_content:
-            parts += ["", SEPARATOR, "", _shorten_urls(block.text)]
+            parts += ["", SEPARATOR, "", block.text]
         else:
-            parts += ["", _shorten_urls(block.text)]
+            parts += ["", block.text]
         has_content = True
         index += 1
 
@@ -781,9 +723,10 @@ def main() -> None:
         force_pricing=args.pricing,
     )
     blocks, missing = run_plugins(plugins, context)
-    body = build_plugin_body(cfg, day_str, date_str, blocks, missing)
-    html_body = build_plugin_html_body(cfg, day_str, date_str, blocks, missing)
+    raw_body = build_plugin_body(cfg, day_str, date_str, blocks, missing)
     subject = f"Daily Brief & Market Update — {day_str}, {date_str}"
+    body = _shorten_urls(raw_body)
+    html_body = build_html_email(raw_body, subject)
 
     if args.dry_run:
         print(f"\n{'=' * 60}")
