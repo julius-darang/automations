@@ -13,6 +13,8 @@ from plugins.base import PluginContext  # noqa: E402
 from plugins.crypto import CryptoPlugin, MarketQuote  # noqa: E402
 from plugins.formatting import shorten_url  # noqa: E402
 from plugins.hackernews import HackerNewsPlugin, HN_ITEM_URL, HN_TOP_STORIES_URL  # noqa: E402
+from plugins.devto import DEVTO_ARTICLES_URL, DevToPlugin  # noqa: E402
+from plugins.lobsters import LOBSTERS_FEED_URL, LobstersPlugin  # noqa: E402
 from plugins.headlines import HeadlinesPlugin  # noqa: E402
 from plugins.ph_stocks import PHStocksPlugin  # noqa: E402
 from plugins.quote import QuotePlugin  # noqa: E402
@@ -45,6 +47,29 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_lobsters_normalizes_ranked_items(self):
+        context = self.context(text_response=(
+            "<rss><channel>"
+            "<item><title>One</title><link>https://lobste.rs/s/one</link></item>"
+            "<item><title>Two</title><link>https://lobste.rs/s/two</link></item>"
+            "</channel></rss>"
+        ))
+        result = LobstersPlugin().fetch(context)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "One")
+        self.assertIn("LOBSTERS", LobstersPlugin().render(result.data))
+
+    def test_devto_normalizes_tags_and_links(self):
+        context = self.context(json_response=[{
+            "title": "A Dev article",
+            "url": "https://dev.to/example/article",
+            "tag_list": ["python", "webdev"],
+        }])
+        result = DevToPlugin().fetch(context)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].details, ("Tags: python, webdev",))
+        self.assertIn("https://dev.to/example/article", DevToPlugin().render(result.data))
 
     def test_hackernews_normalizes_ranked_items(self):
         payloads = {
