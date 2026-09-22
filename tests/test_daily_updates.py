@@ -97,6 +97,11 @@ class DailyUpdatesTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 daily_updates.load_config()
 
+    def test_load_config_rejects_invalid_timezone(self):
+        with patch.dict(os.environ, {"TIMEZONE": "Not/A_Timezone"}, clear=True):
+            with self.assertRaisesRegex(ValueError, "Invalid TIMEZONE"):
+                daily_updates.load_config(require_credentials=False)
+
     def test_get_weather_formats_open_meteo_response(self):
         config = self.make_config()
         response = {
@@ -365,6 +370,15 @@ class DailyUpdatesTests(unittest.TestCase):
                 output = io.StringIO()
                 with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary_path)}, clear=True), \
                      patch.object(daily_updates, "RECIPIENTS_FILE", Path(directory) / "absent"), \
+                     patch.object(
+                         daily_updates,
+                         "load_plugin_config",
+                         return_value=daily_updates.PluginFileConfig(
+                             enabled=("weather", "quote", "headlines", "ai_pricing", "crypto"),
+                             settings={},
+                             schedules={},
+                         ),
+                     ), \
                      patch.object(daily_updates, "pricing_due", return_value=due), \
                      patch.object(daily_updates, "fetch_json", side_effect=json_response), \
                      patch.object(daily_updates, "fetch_text", side_effect=text_response), \
@@ -456,6 +470,12 @@ class DailyUpdatesTests(unittest.TestCase):
         config = self.make_config()
         with patch.object(sys, "argv", ["daily_updates.py"]):
             with patch.object(daily_updates, "load_config", return_value=config), \
+                 patch.object(
+                     daily_updates,
+                     "load_plugin_config",
+                     return_value=daily_updates.PluginFileConfig(enabled=(), settings={}, schedules={}),
+                 ), \
+                 patch.object(daily_updates, "run_plugins", return_value=([], [])), \
                  patch.object(daily_updates, "get_date_info", return_value=("Sunday", "June 14, 2026")), \
                  patch.object(daily_updates, "get_weather", return_value="Weather"), \
                  patch.object(daily_updates, "get_quote", return_value="Quote"), \
@@ -475,7 +495,13 @@ class DailyUpdatesTests(unittest.TestCase):
         config = self.make_config(sender_email="", sender_password="", recipients=())
         with patch.dict(os.environ, {}, clear=True):
             with patch.object(sys, "argv", ["daily_updates.py", "--dry-run"]):
-                with patch.object(daily_updates, "get_date_info", return_value=("Sunday", "June 14, 2026")), \
+                with patch.object(
+                         daily_updates,
+                         "load_plugin_config",
+                         return_value=daily_updates.PluginFileConfig(enabled=(), settings={}, schedules={}),
+                     ), \
+                     patch.object(daily_updates, "run_plugins", return_value=([], [])), \
+                     patch.object(daily_updates, "get_date_info", return_value=("Sunday", "June 14, 2026")), \
                      patch.object(daily_updates, "get_weather", return_value="Weather"), \
                      patch.object(daily_updates, "get_quote", return_value="Quote"), \
                      patch.object(daily_updates, "get_news", return_value=None), \

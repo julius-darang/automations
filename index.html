@@ -167,7 +167,7 @@
     </section>
     <section class="contents" id="inside" aria-labelledby="inside-title">
       <div class="wrap">
-        <div class="section-heading"><h2 id="inside-title">A few useful things.<br>One place to find them.</h2><p>Open it, catch up, get on with your afternoon. Choose your location and model watchlist; the automation brings the sources together.</p></div>
+        <div class="section-heading"><h2 id="inside-title">A few useful things.<br>One place to find them.</h2><p>Open it, catch up, get on with your afternoon. Choose your plugins, location and model watchlist; the automation brings the sources together.</p></div>
         <div class="features">
           <div class="feature"><h3>Local weather</h3><p>Temperature, humidity and wind for Borongan—or the coordinates you choose.</p></div>
           <div class="feature"><h3>Headlines with links</h3><p>Three BBC headlines. Open the original article whenever you want the full story.</p></div>
@@ -186,13 +186,13 @@
         <div class="details" style="margin-top:34px">
           <details><summary>Can I run it for free?</summary><p>Yes, for a personal briefing using a public repository and sources within their free limits. Standard GitHub Actions runners are free for public repositories; Open-Meteo's free endpoint is for noncommercial use. A free Twelve Data key does not guarantee PH stock access. No paid AI inference is needed.</p></details>
           <details><summary>What if a source or delivery fails?</summary><p>The email lists missing data and keeps the useful sections. Failed or partially accepted sends save a fallback. Optional ntfy alerts report failed runs; a Healthchecks monitor can catch runs that never start. Check delivery details before resending.</p></details>
-          <details><summary>Can I change what I receive?</summary><p>Set your city, coordinates, timezone and exact model IDs in the configuration. You can edit the script's market watchlist too. Preview the result locally before enabling delivery; the README includes the commands.</p></details>
+          <details><summary>Can I change what I receive?</summary><p>Edit the tracked <code>plugins.yaml</code> file to enable sections and choose their order. Set your city, coordinates, timezone and exact model IDs in its settings or environment overrides. Preview the result locally before enabling delivery; the README includes the commands.</p></details>
         </div>
       </div>
       <ol class="steps">
         <li><div><h3>Copy the project to GitHub</h3><p>Use your own repository for the script and daily workflow. A public repository keeps standard runner usage free.</p></div></li>
         <li><div><h3>Connect your Gmail sender</h3><p>Create a Gmail app password with two-step verification enabled. Save it and your recipient addresses in GitHub repository secrets.</p></div></li>
-        <li><div><h3>Choose your settings</h3><p>Keep Borongan as your default, or choose another location. Add a stock API key only if your plan supports the exchange.</p></div></li>
+        <li><div><h3>Choose your plugins and settings</h3><p>Edit <code>plugins.yaml</code> to choose sections and their order. Keep Borongan as your default, or choose another location. Add a stock API key only if your plan supports the exchange.</p></div></li>
         <li><div><h3>Enable the daily workflow</h3><p>The brief is scheduled for 2:17 PM Philippine time. You can also run it manually. For missed-run alerts, connect the optional monitor in the guide.</p></div></li>
       </ol>
     </section>
