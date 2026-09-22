@@ -116,8 +116,8 @@ class PluginTests(unittest.TestCase):
         result = AIPricingPlugin().fetch(context)
         self.assertTrue(result.ok)
         self.assertIn("pricing", result.data)
-        self.assertIn("OpenAI releases a new GPT model", result.data["model_news"] or "")
-        self.assertNotIn("OpenAI releases a new GPT model", result.data["general_news"])
+        self.assertTrue(any(item.title == "OpenAI releases a new GPT model" for item in result.data["model_news"]))
+        self.assertFalse(any(item.title == "OpenAI releases a new GPT model" for item in result.data["general_news"]))
         self.assertIn("AI MODEL PRICING", AIPricingPlugin().render(result.data))
 
     def test_ai_plugin_skips_pricing_off_schedule(self):

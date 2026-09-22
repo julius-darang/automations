@@ -14,7 +14,7 @@ from urllib.parse import quote_plus
 from zoneinfo import ZoneInfo
 
 from .base import BasePlugin, FetchResult, PluginContext
-from .formatting import SEPARATOR
+from .formatting import RankedItem, SEPARATOR, render_ranked_list
 
 
 AI_MODEL_NEWS_QUERY = (
@@ -74,17 +74,17 @@ def is_ai_model_advance(title: str) -> bool:
     return has_provider and has_advance_signal
 
 
-def get_google_news(
+def get_google_news_items(
     context: PluginContext,
     feed_url: str,
     model_only: bool = False,
     seen: set[str] | None = None,
-) -> str | None:
-    """Return up to three formatted stories from one Google RSS feed."""
+) -> list[RankedItem] | None:
+    """Fetch and normalize up to three Google RSS stories."""
     try:
         xml_text = context.fetch_text(feed_url, context.max_retries, context.retry_delay)
         root = ET.fromstring(xml_text)
-        blocks: list[str] = []
+        items: list[RankedItem] = []
         seen = set() if seen is None else seen
         for item in root.findall(".//item"):
             title = " ".join((item.findtext("title") or "").split())
@@ -103,20 +103,32 @@ def get_google_news(
             if title_key in seen or link_key in seen:
                 continue
             seen.update((title_key, link_key))
-
-            block = [f"  • {title}"]
-            if source:
-                block.append(f"    Source: {source}")
-            block.append(f"    {link}")
-            blocks.append("\n".join(block))
-            if len(blocks) == AI_NEWS_LIMIT:
+            details = (f"Source: {source}",) if source else ()
+            items.append(RankedItem(title=title, link=link, details=details))
+            if len(items) == AI_NEWS_LIMIT:
                 break
-
-        return "\n\n".join(blocks) if blocks else "  No new matching stories."
+        return items
     except Exception as error:
         label = "AI model news" if model_only else "Google AI news"
         print(f"  ⚠ {label} unavailable: {error}")
         return None
+
+
+def _render_news_items(items: list[RankedItem]) -> str:
+    return render_ranked_list(items, max_results=AI_NEWS_LIMIT) if items else "  No new matching stories."
+
+
+def get_google_news(
+    context: PluginContext,
+    feed_url: str,
+    model_only: bool = False,
+    seen: set[str] | None = None,
+) -> str | None:
+    """Compatibility wrapper returning the legacy plain-text story block."""
+    items = get_google_news_items(context, feed_url, model_only=model_only, seen=seen)
+    if items is None:
+        return None
+    return _render_news_items(items)
 
 
 def parse_model_pricing(data: dict, model_ids: tuple[str, ...] = DEFAULT_MODEL_IDS) -> list[dict]:
@@ -229,18 +241,18 @@ class AIPricingPlugin(BasePlugin):
     display_name = "AI updates"
 
     def fetch(self, context: PluginContext) -> FetchResult:
-        data: dict[str, str] = {}
+        data: dict[str, object] = {}
         missing: list[str] = []
         errors: list[str] = []
         seen: set[str] = set()
 
-        model_news = get_google_news(context, AI_MODEL_NEWS_FEED_URL, model_only=True, seen=seen)
+        model_news = get_google_news_items(context, AI_MODEL_NEWS_FEED_URL, model_only=True, seen=seen)
         if model_news is None:
             missing.append("AI model news")
         else:
             data["model_news"] = model_news
 
-        general_news = get_google_news(context, AI_GENERAL_NEWS_FEED_URL, seen=seen)
+        general_news = get_google_news_items(context, AI_GENERAL_NEWS_FEED_URL, seen=seen)
         if general_news is None:
             missing.append("AI top stories")
         else:
@@ -278,12 +290,12 @@ class AIPricingPlugin(BasePlugin):
             return FetchResult(False, error=error, missing=tuple(missing))
         return FetchResult(True, data=data, error="; ".join(errors) or None, missing=tuple(missing))
 
-    def render(self, data: dict[str, str]) -> str:
+    def render(self, data: dict[str, object]) -> str:
         parts: list[str] = []
-        if data.get("model_news"):
-            parts += ["🤖  AI MODEL ADVANCES", SEPARATOR, data["model_news"]]
-        if data.get("general_news"):
-            parts += ["🗞️  AI TOP STORIES", SEPARATOR, data["general_news"]]
+        if "model_news" in data:
+            parts += ["🤖  AI MODEL ADVANCES", SEPARATOR, _render_news_items(data["model_news"])]
+        if "general_news" in data:
+            parts += ["🗞️  AI TOP STORIES", SEPARATOR, _render_news_items(data["general_news"])]
         if data.get("pricing"):
-            parts += ["💵  AI MODEL PRICING", SEPARATOR, data["pricing"]]
+            parts += ["💵  AI MODEL PRICING", SEPARATOR, str(data["pricing"])]
         return "\n\n".join(parts)
