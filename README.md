@@ -1,7 +1,8 @@
 # Daily Brief & Market Update
 
 A small Python orchestrator loads independent briefing plugins and sends the result
-through Gmail. GitHub Actions schedules it daily for **2:17 PM Philippines time**
+through Gmail as a clean HTML email with a plain-text fallback. GitHub Actions
+schedules it daily for **2:17 PM Philippines time**
 (06:17 UTC). Scheduled runs may arrive late; manual dispatch is also available.
 
 ## The briefing
