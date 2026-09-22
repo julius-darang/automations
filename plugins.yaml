@@ -1,0 +1,20 @@
+# The order below is the order used in the email.
+enabled:
+  - weather
+  - quote
+  - headlines
+  - ai_pricing
+  - crypto
+  # - ph_stocks   # enable only when TWELVEDATA_API_KEY is configured
+
+# These values are defaults. Environment variables with the same names win.
+settings:
+  CITY: "Borongan City, Eastern Samar"
+  LAT: "11.6083"
+  LON: "125.4358"
+  TIMEZONE: "Asia/Manila"
+
+# AI news runs daily; pricing defaults to Mondays. Use --pricing to override.
+schedules:
+  ai_pricing:
+    - monday

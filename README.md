@@ -1,8 +1,8 @@
 # Daily Brief & Market Update
 
-One Python script fetches a personal briefing and sends it through Gmail. GitHub
-Actions schedules it daily for **2:17 PM Philippines time** (06:17 UTC). Scheduled
-runs may arrive late; manual dispatch is also available.
+A small Python orchestrator loads independent briefing plugins and sends the result
+through Gmail. GitHub Actions schedules it daily for **2:17 PM Philippines time**
+(06:17 UTC). Scheduled runs may arrive late; manual dispatch is also available.
 
 ## The briefing
 
@@ -42,7 +42,7 @@ paid AI calls, or automation platform.
 
 ## Setup
 
-Use Python 3.11 or newer. Create an environment and install the pinned dependency:
+Use Python 3.11 or newer. Create an environment and install the pinned dependencies:
 
 ```bash
 python3.11 -m venv .venv
@@ -72,18 +72,44 @@ The workflow uses a read-only repository token, prevents overlapping runs, and
 has a ten-minute limit. Concurrency is not a once-per-day delivery guarantee:
 manual dispatch or a rerun can send another email.
 
+### Choose the plugins
+
+Edit the tracked `plugins.yaml` file. The `enabled` list controls which sections
+run and its order controls the email order:
+
+```yaml
+enabled:
+  - weather
+  - quote
+  - headlines
+  - ai_pricing
+  - crypto
+  # - ph_stocks
+```
+
+The committed `settings` are fork-safe defaults for location and timezone.
+Environment variables override them at runtime. `TWELVEDATA_API_KEY` remains an
+optional secret and is required only when `ph_stocks` is enabled. `ai_pricing`
+contains both daily AI feeds and the scheduled pricing subsection. The optional
+`schedules` mapping controls pricing cadence; pricing defaults to Monday, and
+`--pricing` forces it for a preview.
+
+For plugin authors, see [`plugins/README.md`](plugins/README.md).
+
 ## Local preview and tests
 
 ```bash
-python daily_updates.py --dry-run        # Fetch live data; print only
-python daily_updates.py --dry-run --pricing  # Include pricing on any day
+python daily_updates.py --dry-run                 # Fetch live data; print only
+python daily_updates.py --plugin quote --dry-run   # Preview one plugin
+python daily_updates.py --dry-run --pricing        # Include pricing on any day
 python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
 For local sending, put credentials in the ignored `.env` file and run
 `python daily_updates.py --local`. A dry run never sends mail.
 
-Location overrides (workflow environment or local `.env`):
+Location defaults live in `plugins.yaml`. Environment overrides (workflow
+variables or local `.env`) are still supported:
 
 ```text
 CITY=Borongan City, Eastern Samar
@@ -101,7 +127,7 @@ an example total for 1M input + 250K output.
 
 ## Failures and monitoring
 
-Data requests use bounded timeouts and retries. A failed source does not stop
+Data requests use bounded timeouts and retries. A failed plugin does not stop
 other sections. The email footer and GitHub Actions job summary identify missing
 data; the summary also records delivery status. A feed with no new matching
 stories is reported as empty, not as a delivery failure.
@@ -127,8 +153,10 @@ runs. Creating/configuring the optional monitor is a separate account setup step
 
 ## Files
 
-- `daily_updates.py`: fetch, format, preview, send, and report.
+- `daily_updates.py`: configuration, orchestration, preview, send, and reporting.
+- `plugins.yaml`: enabled plugin order and fork-specific defaults.
+- `plugins/`: discovered data plugins and their contract documentation.
 - `.github/workflows/daily-email.yml`: daily schedule and optional notifications.
 - `.github/workflows/ci.yml`: unit tests on pushes and pull requests.
-- `tests/test_daily_updates.py`: regression tests without live email delivery.
+- `tests/`: regression and plugin-isolation tests without live email delivery.
 - `index.html`: static project page.

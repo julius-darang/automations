@@ -12,17 +12,17 @@ updated: 2026-09-12
 # automations
 
 ## State
-`daily_updates.py` is the single production entry point for the daily brief and market
-update. The workflow schedules it for 06:17 UTC (2:17pm Philippines time); manual dispatch is
-also available. The default location is Borongan City, Eastern Samar and can be
-overridden with `CITY`, `LAT`, `LON`, and `TIMEZONE` environment variables. The email
-includes focused AI model advances, separate Google AI top stories, and OpenRouter model
-pricing on Mondays for a configurable three-model watchlist, without capability ranks.
-News links are preserved and deduplicated across AI feeds. Market rows include
-source timestamps. Missing data appears in the email and Actions summary. SMTP
-timeouts and partial-recipient failure handling protect delivery reporting. Recipients come from the gitignored
-`recipients.txt` locally or the `RECIPIENT_EMAILS` secret in CI, with `RECEIVER_EMAIL` as
-a fallback.
+`daily_updates.py` is the production orchestrator for the daily brief and market update;
+its data sections are discovered from `plugins/` and selected in `plugins.yaml`. The workflow
+schedules it for 06:17 UTC (2:17pm Philippines time); manual dispatch is also available. The
+default location is Borongan City, Eastern Samar and can be overridden in `plugins.yaml` or
+with `CITY`, `LAT`, `LON`, and `TIMEZONE` environment variables. The email includes focused AI
+model advances, separate Google AI top stories, and OpenRouter model pricing on Mondays for a
+configurable three-model watchlist, without capability ranks. News links are preserved and
+deduplicated inside the AI plugin. Market rows include source timestamps. Missing data appears
+in the email and Actions summary. SMTP timeouts and partial-recipient failure handling protect
+delivery reporting. Recipients come from the gitignored `recipients.txt` locally or the
+`RECIPIENT_EMAILS` secret in CI, with `RECEIVER_EMAIL` as a fallback.
 
 ## Next action
 - Deploy the reviewed local changes to GitHub to activate the updated workflow.
@@ -30,8 +30,9 @@ a fallback.
 - Verify Twelve Data PSE entitlement before relying on the optional stock section.
 
 ## Conventions
-- none (scripts are self-contained; secrets via repo Secrets, never committed).
+- Plugins are self-contained; shared transport/contract code lives under `plugins/`.
+- Secrets come from local `.env`/recipient files or repo Secrets and are never committed.
 
 ## Pointers
-- Workflow: `.github/workflows/` · deps `requirements.txt`.
+- Workflow: `.github/workflows/` · deps `requirements.txt` · config `plugins.yaml` · plugin contract `plugins/README.md`.
 - Own `.git` at this path (origin `github.com/julius-darang/automations`).

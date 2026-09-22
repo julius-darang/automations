@@ -42,10 +42,6 @@ jobs:
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
           RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
           TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
-          CITY: "Borongan City, Eastern Samar"
-          LAT: "11.6083"
-          LON: "125.4358"
-          TIMEZONE: "Asia/Manila"
           AI_MODEL_IDS: ${{ vars.AI_MODEL_IDS }}
 
       - name: Ping optional delivery monitor
