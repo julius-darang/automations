@@ -5,6 +5,7 @@ enabled:
   - headlines
   - hackernews
   # - reddit
+  # - papers_with_code
   - lobsters
   - devto
   - arxiv

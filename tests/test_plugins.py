@@ -27,6 +27,7 @@ from plugins.uv_index import UVIndexPlugin  # noqa: E402
 from plugins.sunrise import SunrisePlugin  # noqa: E402
 from plugins.public_holiday import PublicHolidayPlugin  # noqa: E402
 from plugins.reddit import RedditPlugin  # noqa: E402
+from plugins.papers_with_code import PapersWithCodePlugin  # noqa: E402
 
 
 class PluginTests(unittest.TestCase):
@@ -55,6 +56,18 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_papers_with_code_normalizes_html_cards(self):
+        html = """<article>
+          <h3><a href="/papers/test-paper">A Test Paper</a></h3>
+          <p class="line-clamp-2 text-sm">A short abstract.</p>
+          <a href="https://github.com/example/test-paper">GitHub</a>
+        </article>"""
+        result = PapersWithCodePlugin().fetch(self.context(text_response=html))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "A Test Paper")
+        self.assertEqual(result.data[0].link, "https://paperswithcode.com/papers/test-paper")
+        self.assertIn("Repo: https://github.com/example/test-paper", result.data[0].details)
 
     def test_reddit_normalizes_atom_stories(self):
         xml = """<feed xmlns="http://www.w3.org/2005/Atom">
