@@ -4,6 +4,7 @@ enabled:
   - quote
   - headlines
   - hackernews
+  # - reddit
   - lobsters
   - devto
   - arxiv
@@ -26,6 +27,7 @@ settings:
   FX_BASE: "USD"
   FX_QUOTE: "PHP"
   HOLIDAY_COUNTRY: "PH"
+  REDDIT_SUBREDDITS: "technology,programming"
 
 # AI news runs daily; pricing defaults to Mondays. Use --pricing to override.
 schedules:

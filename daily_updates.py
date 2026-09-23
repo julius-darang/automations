@@ -231,7 +231,8 @@ def load_plugin_config(path: Path | str = PLUGIN_CONFIG_FILE) -> PluginFileConfi
     # values even when a fork has not listed them in its YAML file.
     for name in (
         "CITY", "LAT", "LON", "TIMEZONE", "AI_MODEL_IDS",
-        "FX_BASE", "FX_QUOTE", "HOLIDAY_COUNTRY", "MAX_RETRIES", "RETRY_DELAY",
+        "FX_BASE", "FX_QUOTE", "HOLIDAY_COUNTRY", "REDDIT_SUBREDDITS",
+        "MAX_RETRIES", "RETRY_DELAY",
     ):
         if name in os.environ:
             settings[name] = os.environ[name]
@@ -272,7 +273,8 @@ def _plugin_context(
     merged_settings = dict(settings or {})
     for name in (
         "CITY", "LAT", "LON", "TIMEZONE", "AI_MODEL_IDS",
-        "FX_BASE", "FX_QUOTE", "HOLIDAY_COUNTRY", "MAX_RETRIES", "RETRY_DELAY",
+        "FX_BASE", "FX_QUOTE", "HOLIDAY_COUNTRY", "REDDIT_SUBREDDITS",
+        "MAX_RETRIES", "RETRY_DELAY",
     ):
         if name in os.environ:
             merged_settings[name] = os.environ[name]

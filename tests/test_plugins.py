@@ -26,6 +26,7 @@ from plugins.weather import WeatherPlugin  # noqa: E402
 from plugins.uv_index import UVIndexPlugin  # noqa: E402
 from plugins.sunrise import SunrisePlugin  # noqa: E402
 from plugins.public_holiday import PublicHolidayPlugin  # noqa: E402
+from plugins.reddit import RedditPlugin  # noqa: E402
 
 
 class PluginTests(unittest.TestCase):
@@ -54,6 +55,18 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_reddit_normalizes_atom_stories(self):
+        xml = """<feed xmlns="http://www.w3.org/2005/Atom">
+          <entry><title>One Reddit story</title><link href="https://reddit.com/r/technology/comments/1" /></entry>
+        </feed>"""
+        result = RedditPlugin().fetch(self.context(
+            text_response=xml,
+            settings={"REDDIT_SUBREDDITS": "technology,programming"},
+        ))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "One Reddit story")
+        self.assertIn("Source: Reddit", result.data[0].details)
 
     def test_public_holiday_finds_today(self):
         result = PublicHolidayPlugin().fetch(self.context(
