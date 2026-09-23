@@ -442,6 +442,7 @@ def _shorten_urls(text: str) -> str:
 _EMAIL_HEADING_PREFIXES = (
     "🌤", "💬", "📰", "🤖", "🗞", "💵", "🪙", "📈", "📊",
     "🟠", "🔴", "🟣", "📚", "🔬", "🌫", "☀", "💱", "🌅", "🎉", "🇵🇭",
+    "🗣", "🏛", "😄", "📖", "📜", "♟", "🧠", "🍽", "🍸", "🔵", "📄", "🧪", "🐙", "🚀",
 )
 _EMAIL_CSS = """
 body { margin:0; padding:24px 12px; background:#eaf1f8; color:#142c49; font:16px/1.6 Arial, Helvetica, sans-serif; }

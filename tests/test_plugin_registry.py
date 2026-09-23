@@ -144,6 +144,10 @@ Missing data: Headlines
             "🟠  HACKER NEWS", "🔴  LOBSTERS", "🟣  DEV.TO", "📚  ARXIV AI PAPERS",
             "🔬  OPENALEX PAPERS", "🌫️  AIR QUALITY", "☀️  UV INDEX", "💱  FX RATE",
             "🌅  SUNRISE / SUNSET", "🎉  PUBLIC HOLIDAY", "🇵🇭  PSE STOCKS",
+            "🗣️  QUOTABLE", "🏛️  STOIC QUOTE", "😄  DAD JOKE", "📖  WORD OF THE DAY",
+            "📜  BIBLE VERSE", "♟️  CHESS PUZZLE OF THE DAY", "🧠  TRIVIA", "🍽️  RECIPE",
+            "🍸  COCKTAIL", "🔵  REDDIT TECH", "📄  PAPERS WITH CODE",
+            "🧪  SEMANTIC SCHOLAR", "🐙  GITHUB TRENDING", "🚀  PRODUCT HUNT",
         )
         body = "Good afternoon!\n📅  Wednesday, September 23, 2026\n" + "\n".join(headings)
         html = daily_updates.build_html_email(body)
