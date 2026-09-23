@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import yfinance as yf
 
 from .base import BasePlugin, FetchResult, PluginContext
+from .formatting import KeyValue, render_kv
 
 
 CRYPTO_SYMBOLS = [
@@ -46,7 +47,7 @@ def fetch_crypto_prices() -> dict[str, MarketQuote]:
     return prices
 
 
-def _market_rows(
+def render_market_rows(
     title: str,
     prices: dict[str, MarketQuote],
     order: list[str],
@@ -63,13 +64,15 @@ def _market_rows(
         change = "change unavailable" if record.change is None else (
             f"{'▲' if record.change >= 0 else '▼'}{abs(record.change):.1f}%"
         )
-        lines.append(f"  {name}  •  {currency}{record.price:,.2f}  ({change})")
-        lines.append(f"    {timestamp_label}: {record.as_of}")
+        price_row = KeyValue(name, f"{currency}{record.price:,.2f} ({change})")
+        timestamp_row = KeyValue(timestamp_label, record.as_of)
+        lines.append(f"  {render_kv(price_row.label, price_row.value)}")
+        lines.append(f"    {render_kv(timestamp_row.label, timestamp_row.value)}")
     return lines
 
 
 def render_crypto_section(prices: dict[str, MarketQuote]) -> str:
-    return "\n".join(_market_rows(
+    return "\n".join(render_market_rows(
         "🪙  CRYPTO — change vs previous daily close",
         prices,
         CRYPTO_ORDER,
@@ -86,7 +89,7 @@ def build_market_section(crypto: dict, stocks: dict) -> str:
     if crypto:
         parts += ["", render_crypto_section(crypto)]
     if stocks:
-        parts += ["", "\n".join(_market_rows("🇵🇭  PSE STOCKS", stocks, ["BDO", "SM", "TEL", "ALI", "JFC"], "₱", "As of"))]
+        parts += ["", "\n".join(render_market_rows("🇵🇭  PSE STOCKS", stocks, ["BDO", "SM", "TEL", "ALI", "JFC"], "₱", "As of"))]
     return "\n".join(parts)
 
 

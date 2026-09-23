@@ -359,7 +359,8 @@ class PluginTests(unittest.TestCase):
             result = crypto.fetch(self.context())
         self.assertTrue(result.ok)
         self.assertIn("Crypto: ETH", result.missing)
-        self.assertIn("BTC", crypto.render(result.data))
+        self.assertIn("BTC: $100.00 (▲1.0%)", crypto.render(result.data))
+        self.assertIn("Daily bar: 2026-09-21T00:00:00+00:00", crypto.render(result.data))
 
         stock = PHStocksPlugin()
         stock_context = self.context(api_key="secret", json_response={
@@ -373,6 +374,8 @@ class PluginTests(unittest.TestCase):
             result = stock.fetch(stock_context)
         self.assertTrue(result.ok)
         self.assertIn("PSE STOCKS", stock.render(result.data))
+        self.assertIn("BDO: ₱145.50 (▲0.5%)", stock.render(result.data))
+        self.assertIn("As of: 2026-09-21 Asia/Manila", stock.render(result.data))
 
 
 if __name__ == "__main__":
