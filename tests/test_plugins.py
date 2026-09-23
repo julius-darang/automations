@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT))
 
 from plugins.ai_pricing import AIPricingPlugin, AI_GENERAL_NEWS_FEED_URL, AI_MODEL_NEWS_FEED_URL  # noqa: E402
 from plugins.air_quality import AirQualityPlugin  # noqa: E402
-from plugins.arxiv import ArxivPlugin  # noqa: E402
+from plugins.arxiv import ARXIV_FALLBACK_URL, ARXIV_QUERY_URL, ArxivPlugin  # noqa: E402
 from plugins.base import PluginContext  # noqa: E402
 from plugins.crypto import CryptoPlugin, MarketQuote  # noqa: E402
 from plugins.formatting import shorten_url  # noqa: E402
@@ -111,6 +111,20 @@ class PluginTests(unittest.TestCase):
         self.assertEqual(result.data[0].title, "A research paper")
         self.assertIn("Authors: Researcher", result.data[0].details)
         self.assertIn("Citations: 12", result.data[0].details)
+
+    def test_arxiv_falls_back_when_primary_feed_stalls(self):
+        xml = '<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>https://arxiv.org/abs/1</id><title>Paper</title></entry></feed>'
+        calls = []
+
+        def fetch_text(url, *_):
+            calls.append(url)
+            if url == ARXIV_QUERY_URL:
+                raise TimeoutError("primary stalled")
+            return xml
+
+        result = ArxivPlugin().fetch(self.context(text_response=fetch_text))
+        self.assertTrue(result.ok)
+        self.assertEqual(calls, [ARXIV_QUERY_URL, ARXIV_FALLBACK_URL])
 
     def test_arxiv_normalizes_authors_and_abstract(self):
         xml = """<feed xmlns="http://www.w3.org/2005/Atom">
