@@ -16,6 +16,7 @@ from plugins.formatting import shorten_url  # noqa: E402
 from plugins.hackernews import HackerNewsPlugin, HN_ITEM_URL, HN_TOP_STORIES_URL  # noqa: E402
 from plugins.devto import DEVTO_ARTICLES_URL, DevToPlugin  # noqa: E402
 from plugins.lobsters import LOBSTERS_FEED_URL, LobstersPlugin  # noqa: E402
+from plugins.openalex import OpenAlexPlugin  # noqa: E402
 from plugins.headlines import HeadlinesPlugin  # noqa: E402
 from plugins.ph_stocks import PHStocksPlugin  # noqa: E402
 from plugins.quote import QuotePlugin  # noqa: E402
@@ -48,6 +49,19 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_openalex_normalizes_authors_and_citations(self):
+        payload = {"results": [{
+            "title": "A research paper",
+            "doi": "https://doi.org/10.1234/example",
+            "authorships": [{"author": {"display_name": "Researcher"}}],
+            "cited_by_count": 12,
+        }]}
+        result = OpenAlexPlugin().fetch(self.context(json_response=payload))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "A research paper")
+        self.assertIn("Authors: Researcher", result.data[0].details)
+        self.assertIn("Citations: 12", result.data[0].details)
 
     def test_arxiv_normalizes_authors_and_abstract(self):
         xml = """<feed xmlns="http://www.w3.org/2005/Atom">

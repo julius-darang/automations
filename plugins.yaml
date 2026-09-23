@@ -7,6 +7,7 @@ enabled:
   # - lobsters
   # - devto
   # - arxiv
+  # - openalex
   - ai_pricing
   - crypto
   # - ph_stocks   # enable only when TWELVEDATA_API_KEY is configured
