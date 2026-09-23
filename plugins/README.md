@@ -4,6 +4,24 @@ Each plugin is a self-contained Python module implementing `BasePlugin`.
 Adding a plugin does not require editing the orchestrator or the registry: add a
 module under this directory, then add its `name` to the root `plugins.yaml`.
 
+## Optional source catalog
+
+The ranked-list sources are intentionally opt-in in `plugins.yaml`:
+
+- `reddit`: technology/programming RSS; configure `REDDIT_SUBREDDITS`.
+- `papers_with_code`: public Papers With Code paper cards.
+- `semantic_scholar`: Academic Graph search; configure
+  `SEMANTIC_SCHOLAR_QUERY` and optionally provide the
+  `SEMANTIC_SCHOLAR_API_KEY` environment secret.
+- `github_trending`: public repository trend page; configure
+  `GITHUB_TRENDING_SINCE`, `GITHUB_TRENDING_LANGUAGE`, and
+  `GITHUB_TRENDING_LIMIT`.
+- `product_hunt`: public Product Hunt Atom feed; configure
+  `PRODUCT_HUNT_LIMIT`.
+
+These providers are isolated: an unavailable optional source is reported in the
+missing-data footer without preventing the rest of the brief from rendering.
+
 ## Contract
 
 ```python

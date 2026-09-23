@@ -32,6 +32,11 @@ may be delayed or from an earlier trading day; always check their source timesta
 | Weekly model prices | [OpenRouter catalog](https://openrouter.ai/models) | Public catalog; no model inference calls |
 | Crypto | [yfinance](https://pypi.org/project/yfinance/) | Public Yahoo data access |
 | PH stocks | [Twelve Data](https://twelvedata.com/pricing) | Optional key; verify PSE entitlement on your plan |
+| Reddit tech | [Reddit RSS](https://www.reddit.com/dev/api/) | Public RSS feed; configurable subreddits |
+| Papers With Code | [Papers With Code](https://paperswithcode.com/) | Public web feed |
+| Semantic Scholar | [Academic Graph API](https://www.semanticscholar.org/product/api) | Public API; optional `SEMANTIC_SCHOLAR_API_KEY` |
+| GitHub Trending | [GitHub Trending](https://github.com/trending) | Public web page |
+| Product Hunt | [Product Hunt Atom feed](https://www.producthunt.com/feed) | Public feed |
 
 A free Twelve Data key does not guarantee access to every exchange. Keep PH stocks
 optional if your account does not include them; this project does not require an
@@ -62,6 +67,7 @@ Add these GitHub repository secrets:
 | `RECIPIENT_EMAILS` | One recipient per line |
 | `RECEIVER_EMAIL` | Optional legacy single-recipient fallback |
 | `TWELVEDATA_API_KEY` | Optional PH stock access |
+| `SEMANTIC_SCHOLAR_API_KEY` | Optional higher/reliable Semantic Scholar API access |
 | `NTFY_TOPIC` | Optional random ntfy topic for workflow failure alerts |
 | `HEALTHCHECKS_PING_URL` | Optional missing-run monitor ping URL |
 
@@ -89,9 +95,12 @@ enabled:
 ```
 
 Additional optional plugins are available but disabled by default: `hackernews`,
-`lobsters`, `devto`, `arxiv`, `openalex`, `air_quality`, `uv_index`, `fx`,
-`sunrise`, and `public_holiday`. Enable them one at a time as you decide what
-belongs in your brief.
+`reddit`, `papers_with_code`, `semantic_scholar`, `github_trending`, `product_hunt`,
+`lobsters`, `devto`, `arxiv`, `openalex`, `air_quality`, `uv_index`, `fx`, `sunrise`,
+and `public_holiday`. Enable them one at a time as you decide what belongs in your
+brief. Reddit, Semantic Scholar, GitHub Trending, and Product Hunt expose settings
+for source queries/limits in `plugins.yaml`; environment variables with the same
+names override those defaults.
 
 The committed `settings` are fork-safe defaults for location and timezone.
 Environment variables override them at runtime. `TWELVEDATA_API_KEY` remains an
@@ -112,7 +121,9 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
 For local sending, put credentials in the ignored `.env` file and run
-`python daily_updates.py --local`. A dry run never sends mail.
+`python daily_updates.py --local`. A dry run never sends mail. Manual GitHub
+workflow dispatch also has a `dry_run` checkbox; it fetches and prints the brief
+without sending or pinging the delivery monitor.
 
 Location defaults live in `plugins.yaml`. Environment overrides (workflow
 variables or local `.env`) are still supported:
@@ -122,6 +133,9 @@ CITY=Borongan City, Eastern Samar
 LAT=11.6083
 LON=125.4358
 TIMEZONE=Asia/Manila
+REDDIT_SUBREDDITS=technology,programming
+SEMANTIC_SCHOLAR_QUERY=artificial intelligence
+GITHUB_TRENDING_LANGUAGE=Python
 ```
 
 Set the optional **repository variable** `AI_MODEL_IDS` (or the same environment
