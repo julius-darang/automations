@@ -11,8 +11,8 @@ from .http import fetch_json as default_fetch_json
 from .http import fetch_text as default_fetch_text
 
 
-JsonFetcher = Callable[[str, int, int], dict | list]
-TextFetcher = Callable[[str, int, int], str]
+JsonFetcher = Callable[[str, int, int, Mapping[str, str] | None], dict | list]
+TextFetcher = Callable[[str, int, int, Mapping[str, str] | None], str]
 PricingSchedule = Callable[[str, datetime | None], bool]
 
 

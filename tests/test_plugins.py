@@ -28,6 +28,9 @@ from plugins.sunrise import SunrisePlugin  # noqa: E402
 from plugins.public_holiday import PublicHolidayPlugin  # noqa: E402
 from plugins.reddit import RedditPlugin  # noqa: E402
 from plugins.papers_with_code import PapersWithCodePlugin  # noqa: E402
+from plugins.semantic_scholar import SemanticScholarPlugin  # noqa: E402
+from plugins.github_trending import GitHubTrendingPlugin  # noqa: E402
+from plugins.product_hunt import ProductHuntPlugin  # noqa: E402
 
 
 class PluginTests(unittest.TestCase):
@@ -56,6 +59,51 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_product_hunt_normalizes_atom_entries(self):
+        xml = """<feed xmlns="http://www.w3.org/2005/Atom">
+          <entry>
+            <title>Useful Product</title>
+            <link rel="alternate" href="https://www.producthunt.com/products/useful" />
+            <content type="html">&lt;p&gt;A useful product.&lt;/p&gt;</content>
+            <author><name>Maker</name></author>
+            <published>2026-09-21T08:00:00Z</published>
+          </entry>
+        </feed>"""
+        result = ProductHuntPlugin().fetch(self.context(text_response=xml))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "Useful Product")
+        self.assertIn("A useful product.", result.data[0].details)
+        self.assertIn("Maker: Maker", result.data[0].details)
+
+    def test_github_trending_normalizes_repositories(self):
+        html = """<article class="Box-row">
+          <h2><a href="/example/project"><span>example /</span> project</a></h2>
+          <p class="col-9 color-fg-muted my-1">A useful project.</p>
+          <span itemprop="programmingLanguage">Python</span>
+          <span>120 stars today</span>
+        </article>"""
+        result = GitHubTrendingPlugin().fetch(self.context(text_response=html))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "example/project")
+        self.assertIn("Language: Python", result.data[0].details)
+        self.assertIn("120 stars today", result.data[0].details)
+
+    def test_semantic_scholar_normalizes_papers(self):
+        result = SemanticScholarPlugin().fetch(self.context(json_response={
+            "data": [{
+                "paperId": "abc123",
+                "title": "A research paper",
+                "url": "https://www.semanticscholar.org/paper/abc123",
+                "authors": [{"name": "Researcher"}],
+                "year": 2026,
+                "citationCount": 12,
+            }],
+        }))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "A research paper")
+        self.assertIn("Authors: Researcher", result.data[0].details)
+        self.assertIn("Citations: 12", result.data[0].details)
 
     def test_papers_with_code_normalizes_html_cards(self):
         html = """<article>
