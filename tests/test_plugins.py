@@ -24,6 +24,7 @@ from plugins.ph_stocks import PHStocksPlugin  # noqa: E402
 from plugins.quote import QuotePlugin  # noqa: E402
 from plugins.weather import WeatherPlugin  # noqa: E402
 from plugins.uv_index import UVIndexPlugin  # noqa: E402
+from plugins.sunrise import SunrisePlugin  # noqa: E402
 
 
 class PluginTests(unittest.TestCase):
@@ -52,6 +53,17 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_sunrise_normalizes_daily_values(self):
+        result = SunrisePlugin().fetch(self.context(json_response={
+            "daily": {
+                "sunrise": ["2026-09-23T05:30"],
+                "sunset": ["2026-09-23T17:45"],
+            },
+        }))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].label, "Sunrise")
+        self.assertIn("Sunset: 2026-09-23T17:45", SunrisePlugin().render(result.data))
 
     def test_fx_normalizes_configured_rate(self):
         result = FXPlugin().fetch(self.context(
