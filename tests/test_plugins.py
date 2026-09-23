@@ -25,6 +25,7 @@ from plugins.quote import QuotePlugin  # noqa: E402
 from plugins.weather import WeatherPlugin  # noqa: E402
 from plugins.uv_index import UVIndexPlugin  # noqa: E402
 from plugins.sunrise import SunrisePlugin  # noqa: E402
+from plugins.public_holiday import PublicHolidayPlugin  # noqa: E402
 
 
 class PluginTests(unittest.TestCase):
@@ -53,6 +54,16 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_public_holiday_finds_today(self):
+        result = PublicHolidayPlugin().fetch(self.context(
+            json_response=[{"date": "2026-09-21", "localName": "A Holiday"}],
+            settings={"HOLIDAY_COUNTRY": "PH"},
+            now=datetime(2026, 9, 21, 8, 0),
+        ))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data.value, "A Holiday")
+        self.assertIn("A Holiday", PublicHolidayPlugin().render(result.data))
 
     def test_sunrise_normalizes_daily_values(self):
         result = SunrisePlugin().fetch(self.context(json_response={
