@@ -9,9 +9,10 @@ from .formatting import RankedItem, render_ranked_list, section
 
 
 ARXIV_QUERY_URL = (
-    "https://export.arxiv.org/api/query?search_query=cat:cs.AI"
+    "https://export.arxiv.org/api/query?search_query=cat%3Acs.AI"
     "&start=0&max_results=5&sortBy=submittedDate&sortOrder=descending"
 )
+ARXIV_FALLBACK_URL = ARXIV_QUERY_URL.replace("https://", "http://")
 ARXIV_NAMESPACE = {"atom": "http://www.w3.org/2005/Atom"}
 ARXIV_LIMIT = 5
 ABSTRACT_LIMIT = 180
@@ -23,11 +24,16 @@ class ArxivPlugin(BasePlugin):
 
     def fetch(self, context: PluginContext) -> FetchResult:
         try:
-            xml_text = context.fetch_text(
-                ARXIV_QUERY_URL,
-                context.max_retries,
-                context.retry_delay,
-            )
+            try:
+                # arXiv can intermittently stall its HTTPS API; use one quick
+                # attempt before falling back to the equivalent public HTTP endpoint.
+                xml_text = context.fetch_text(ARXIV_QUERY_URL, 0, 0)
+            except Exception:
+                xml_text = context.fetch_text(
+                    ARXIV_FALLBACK_URL,
+                    context.max_retries,
+                    context.retry_delay,
+                )
             root = ET.fromstring(xml_text)
             items: list[RankedItem] = []
             for entry in root.findall("atom:entry", ARXIV_NAMESPACE):
