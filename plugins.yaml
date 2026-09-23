@@ -2,8 +2,22 @@
 enabled:
   - weather
   - quote
+  - quotable
+  - stoic
+  - dad_joke
+  - word_of_day
+  - bible_verse
+  - chess_puzzle
+  - trivia
+  - recipe
+  - cocktail
   - headlines
   - hackernews
+  - reddit
+  - papers_with_code
+  - semantic_scholar
+  - github_trending
+  - product_hunt
   - lobsters
   - devto
   - arxiv
@@ -26,6 +40,13 @@ settings:
   FX_BASE: "USD"
   FX_QUOTE: "PHP"
   HOLIDAY_COUNTRY: "PH"
+  REDDIT_SUBREDDITS: "technology,programming"
+  SEMANTIC_SCHOLAR_QUERY: "artificial intelligence"
+  SEMANTIC_SCHOLAR_LIMIT: 5
+  GITHUB_TRENDING_SINCE: "daily"
+  GITHUB_TRENDING_LANGUAGE: ""
+  GITHUB_TRENDING_LIMIT: 5
+  PRODUCT_HUNT_LIMIT: 5
 
 # AI news runs daily; pricing defaults to Mondays. Use --pricing to override.
 schedules:

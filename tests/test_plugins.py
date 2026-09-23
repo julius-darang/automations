@@ -22,10 +22,24 @@ from plugins.openalex import OpenAlexPlugin  # noqa: E402
 from plugins.headlines import HeadlinesPlugin  # noqa: E402
 from plugins.ph_stocks import PHStocksPlugin  # noqa: E402
 from plugins.quote import QuotePlugin  # noqa: E402
+from plugins.quotable import QuotablePlugin  # noqa: E402
+from plugins.stoic import StoicPlugin  # noqa: E402
+from plugins.dad_joke import DadJokePlugin  # noqa: E402
+from plugins.word_of_day import WordOfDayPlugin  # noqa: E402
+from plugins.bible_verse import BibleVersePlugin  # noqa: E402
+from plugins.chess_puzzle import ChessPuzzlePlugin  # noqa: E402
+from plugins.trivia import TriviaPlugin  # noqa: E402
+from plugins.recipe import RecipePlugin  # noqa: E402
+from plugins.cocktail import CocktailPlugin  # noqa: E402
 from plugins.weather import WeatherPlugin  # noqa: E402
 from plugins.uv_index import UVIndexPlugin  # noqa: E402
 from plugins.sunrise import SunrisePlugin  # noqa: E402
 from plugins.public_holiday import PublicHolidayPlugin  # noqa: E402
+from plugins.reddit import RedditPlugin  # noqa: E402
+from plugins.papers_with_code import PapersWithCodePlugin  # noqa: E402
+from plugins.semantic_scholar import SemanticScholarPlugin  # noqa: E402
+from plugins.github_trending import GitHubTrendingPlugin  # noqa: E402
+from plugins.product_hunt import ProductHuntPlugin  # noqa: E402
 
 
 class PluginTests(unittest.TestCase):
@@ -54,6 +68,154 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_custom_plugins_normalize_chess_trivia_recipe_and_cocktail(self):
+        chess = ChessPuzzlePlugin().fetch(self.context(json_response={
+            "puzzle": {"id": "abc", "rating": 1500, "themes": ["mateIn2"], "fen": "8/8/8/8/8/8/8/8 w - - 0 1"},
+        }))
+        self.assertTrue(chess.ok)
+        self.assertIn("https://lichess.org/training/abc", ChessPuzzlePlugin().render(chess.data))
+
+        trivia = TriviaPlugin().fetch(self.context(json_response={
+            "results": [{
+                "category": "Science &amp; Nature",
+                "difficulty": "easy",
+                "question": "What is 2 &amp; 2?",
+                "correct_answer": "4",
+                "incorrect_answers": ["3", "5", "6"],
+            }],
+        }))
+        self.assertTrue(trivia.ok)
+        self.assertIn("What is 2 & 2?", TriviaPlugin().render(trivia.data))
+
+        recipe = RecipePlugin().fetch(self.context(json_response={
+            "meals": [{
+                "strMeal": "Test Soup", "strCategory": "Soup", "strArea": "Test",
+                "strIngredient1": "Water", "strMeasure1": "1 cup",
+                "strInstructions": "Boil it.",
+            }],
+        }))
+        self.assertTrue(recipe.ok)
+        self.assertIn("1 cup Water", RecipePlugin().render(recipe.data))
+
+        cocktail = CocktailPlugin().fetch(self.context(json_response={
+            "drinks": [{
+                "strDrink": "Test Tonic", "strCategory": "Cocktail", "strGlass": "Glass",
+                "strAlcoholic": "Alcoholic", "strIngredient1": "Gin", "strMeasure1": "2 oz",
+                "strInstructions": "Stir it.",
+            }],
+        }))
+        self.assertTrue(cocktail.ok)
+        self.assertIn("2 oz Gin", CocktailPlugin().render(cocktail.data))
+
+    def test_quotable_and_stoic_normalize_quotes(self):
+        quotable = QuotablePlugin().fetch(self.context(json_response={
+            "content": "A useful quote.", "author": "A Writer",
+        }))
+        self.assertTrue(quotable.ok)
+        self.assertEqual(quotable.data["author"], "A Writer")
+
+        stoic = StoicPlugin().fetch(self.context(json_response={
+            "text": "A stoic quote.", "author": "Seneca",
+        }))
+        self.assertTrue(stoic.ok)
+        self.assertIn("Seneca", StoicPlugin().render(stoic.data))
+
+    def test_dad_joke_normalizes_json_with_accept_header(self):
+        result = DadJokePlugin().fetch(self.context(json_response={"joke": "A dad joke."}))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data, "A dad joke.")
+
+    def test_word_of_day_normalizes_feed_definition(self):
+        xml = """<rss><channel><item>
+          <title>compendious</title>
+          <link>https://example.com/compendious</link>
+          <description>&lt;p&gt;&lt;strong&gt;compendious&lt;/strong&gt; · adjective&lt;br /&gt;&lt;p&gt;Comprehensive and concise.&lt;/p&gt;&lt;/p&gt;</description>
+        </item></channel></rss>"""
+        result = WordOfDayPlugin().fetch(self.context(text_response=xml))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data["word"], "compendious")
+        self.assertIn("Comprehensive and concise", result.data["definition"])
+
+    def test_bible_verse_normalizes_random_verse(self):
+        result = BibleVersePlugin().fetch(self.context(json_response={
+            "random_verse": {
+                "book": "John", "chapter": 3, "verse": 16,
+                "text": "For God so loved the world.",
+            },
+        }))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data["reference"], "John 3:16")
+        self.assertIn("For God so loved", BibleVersePlugin().render(result.data))
+
+    def test_product_hunt_normalizes_atom_entries(self):
+        xml = """<feed xmlns="http://www.w3.org/2005/Atom">
+          <entry>
+            <title>Useful Product</title>
+            <link rel="alternate" href="https://www.producthunt.com/products/useful" />
+            <content type="html">&lt;p&gt;A useful product.&lt;/p&gt;</content>
+            <author><name>Maker</name></author>
+            <published>2026-09-21T08:00:00Z</published>
+          </entry>
+        </feed>"""
+        result = ProductHuntPlugin().fetch(self.context(text_response=xml))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "Useful Product")
+        self.assertIn("A useful product.", result.data[0].details)
+        self.assertIn("Maker: Maker", result.data[0].details)
+
+    def test_github_trending_normalizes_repositories(self):
+        html = """<article class="Box-row">
+          <h2><a href="/example/project"><span>example /</span> project</a></h2>
+          <p class="col-9 color-fg-muted my-1">A useful project.</p>
+          <span itemprop="programmingLanguage">Python</span>
+          <span>120 stars today</span>
+        </article>"""
+        result = GitHubTrendingPlugin().fetch(self.context(text_response=html))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "example/project")
+        self.assertIn("Language: Python", result.data[0].details)
+        self.assertIn("120 stars today", result.data[0].details)
+
+    def test_semantic_scholar_normalizes_papers(self):
+        result = SemanticScholarPlugin().fetch(self.context(json_response={
+            "data": [{
+                "paperId": "abc123",
+                "title": "A research paper",
+                "url": "https://www.semanticscholar.org/paper/abc123",
+                "authors": [{"name": "Researcher"}],
+                "year": 2026,
+                "citationCount": 12,
+            }],
+        }))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "A research paper")
+        self.assertIn("Authors: Researcher", result.data[0].details)
+        self.assertIn("Citations: 12", result.data[0].details)
+
+    def test_papers_with_code_normalizes_html_cards(self):
+        html = """<article>
+          <h3><a href="/papers/test-paper">A Test Paper</a></h3>
+          <p class="line-clamp-2 text-sm">A short abstract.</p>
+          <a href="https://github.com/example/test-paper">GitHub</a>
+        </article>"""
+        result = PapersWithCodePlugin().fetch(self.context(text_response=html))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "A Test Paper")
+        self.assertEqual(result.data[0].link, "https://paperswithcode.com/papers/test-paper")
+        self.assertIn("Repo: https://github.com/example/test-paper", result.data[0].details)
+
+    def test_reddit_normalizes_atom_stories(self):
+        xml = """<feed xmlns="http://www.w3.org/2005/Atom">
+          <entry><title>One Reddit story</title><link href="https://reddit.com/r/technology/comments/1" /></entry>
+        </feed>"""
+        result = RedditPlugin().fetch(self.context(
+            text_response=xml,
+            settings={"REDDIT_SUBREDDITS": "technology,programming"},
+        ))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "One Reddit story")
+        self.assertIn("Source: Reddit", result.data[0].details)
 
     def test_public_holiday_finds_today(self):
         result = PublicHolidayPlugin().fetch(self.context(
@@ -285,7 +447,8 @@ class PluginTests(unittest.TestCase):
             result = crypto.fetch(self.context())
         self.assertTrue(result.ok)
         self.assertIn("Crypto: ETH", result.missing)
-        self.assertIn("BTC", crypto.render(result.data))
+        self.assertIn("BTC: $100.00 (▲1.0%)", crypto.render(result.data))
+        self.assertIn("Daily bar: 2026-09-21T00:00:00+00:00", crypto.render(result.data))
 
         stock = PHStocksPlugin()
         stock_context = self.context(api_key="secret", json_response={
@@ -299,6 +462,8 @@ class PluginTests(unittest.TestCase):
             result = stock.fetch(stock_context)
         self.assertTrue(result.ok)
         self.assertIn("PSE STOCKS", stock.render(result.data))
+        self.assertIn("BDO: ₱145.50 (▲0.5%)", stock.render(result.data))
+        self.assertIn("As of: 2026-09-21 Asia/Manila", stock.render(result.data))
 
 
 if __name__ == "__main__":

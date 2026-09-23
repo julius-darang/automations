@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 
 from .base import BasePlugin, FetchResult, PluginContext
-from .crypto import MarketQuote
+from .crypto import MarketQuote, render_market_rows
 
 
 STOCK_SYMBOLS = [
@@ -51,19 +51,7 @@ def fetch_stock_prices(context: PluginContext) -> dict[str, MarketQuote]:
 
 
 def render_stock_section(prices: dict[str, MarketQuote]) -> str:
-    if not prices:
-        return ""
-    lines = ["🇵🇭  PSE STOCKS"]
-    for name in STOCK_ORDER:
-        if name not in prices:
-            continue
-        record = prices[name]
-        change = "change unavailable" if record.change is None else (
-            f"{'▲' if record.change >= 0 else '▼'}{abs(record.change):.1f}%"
-        )
-        lines.append(f"  {name}  •  ₱{record.price:,.2f}  ({change})")
-        lines.append(f"    As of: {record.as_of}")
-    return "\n".join(lines)
+    return "\n".join(render_market_rows("🇵🇭  PSE STOCKS", prices, STOCK_ORDER, "₱", "As of"))
 
 
 class PHStocksPlugin(BasePlugin):

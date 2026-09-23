@@ -87,12 +87,22 @@ class PluginFileConfig:
 # These wrappers keep the old import surface available while the implementation
 # lives in plugins. They also make transport calls straightforward to patch in
 # compatibility tests and local development.
-def fetch_json(url: str, max_retries: int = 2, delay: int = 3) -> dict | list:
-    return _http_fetch_json(url, max_retries, delay)
+def fetch_json(
+    url: str,
+    max_retries: int = 2,
+    delay: int = 3,
+    headers: Mapping[str, str] | None = None,
+) -> dict | list:
+    return _http_fetch_json(url, max_retries, delay, headers)
 
 
-def fetch_text(url: str, max_retries: int = 2, delay: int = 3) -> str:
-    return _http_fetch_text(url, max_retries, delay)
+def fetch_text(
+    url: str,
+    max_retries: int = 2,
+    delay: int = 3,
+    headers: Mapping[str, str] | None = None,
+) -> str:
+    return _http_fetch_text(url, max_retries, delay, headers)
 
 
 def load_env(path: str = ".env") -> None:
@@ -231,7 +241,11 @@ def load_plugin_config(path: Path | str = PLUGIN_CONFIG_FILE) -> PluginFileConfi
     # values even when a fork has not listed them in its YAML file.
     for name in (
         "CITY", "LAT", "LON", "TIMEZONE", "AI_MODEL_IDS",
-        "FX_BASE", "FX_QUOTE", "HOLIDAY_COUNTRY", "MAX_RETRIES", "RETRY_DELAY",
+        "FX_BASE", "FX_QUOTE", "HOLIDAY_COUNTRY", "REDDIT_SUBREDDITS",
+        "SEMANTIC_SCHOLAR_QUERY", "SEMANTIC_SCHOLAR_LIMIT",
+        "GITHUB_TRENDING_SINCE", "GITHUB_TRENDING_LANGUAGE", "GITHUB_TRENDING_LIMIT",
+        "PRODUCT_HUNT_LIMIT",
+        "MAX_RETRIES", "RETRY_DELAY",
     ):
         if name in os.environ:
             settings[name] = os.environ[name]
@@ -272,7 +286,11 @@ def _plugin_context(
     merged_settings = dict(settings or {})
     for name in (
         "CITY", "LAT", "LON", "TIMEZONE", "AI_MODEL_IDS",
-        "FX_BASE", "FX_QUOTE", "HOLIDAY_COUNTRY", "MAX_RETRIES", "RETRY_DELAY",
+        "FX_BASE", "FX_QUOTE", "HOLIDAY_COUNTRY", "REDDIT_SUBREDDITS",
+        "SEMANTIC_SCHOLAR_QUERY", "SEMANTIC_SCHOLAR_LIMIT",
+        "GITHUB_TRENDING_SINCE", "GITHUB_TRENDING_LANGUAGE", "GITHUB_TRENDING_LIMIT",
+        "PRODUCT_HUNT_LIMIT",
+        "MAX_RETRIES", "RETRY_DELAY",
     ):
         if name in os.environ:
             merged_settings[name] = os.environ[name]
@@ -290,7 +308,10 @@ def _plugin_context(
         fetch_json=fetch_json,
         fetch_text=fetch_text,
         pricing_due=pricing_due,
-        secrets={"TWELVEDATA_API_KEY": cfg.twelvedata_api_key},
+        secrets={
+            "TWELVEDATA_API_KEY": cfg.twelvedata_api_key,
+            "SEMANTIC_SCHOLAR_API_KEY": os.environ.get("SEMANTIC_SCHOLAR_API_KEY", ""),
+        },
     )
 
 
