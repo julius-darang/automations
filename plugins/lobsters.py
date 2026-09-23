@@ -1,4 +1,4 @@
-"""BBC RSS headlines plugin."""
+"""Lobsters RSS ranked stories plugin."""
 
 from __future__ import annotations
 
@@ -8,14 +8,18 @@ from .base import BasePlugin, FetchResult, PluginContext
 from .formatting import RankedItem, render_ranked_list, section
 
 
-class HeadlinesPlugin(BasePlugin):
-    name = "headlines"
-    display_name = "Headlines"
+LOBSTERS_FEED_URL = "https://lobste.rs/rss"
+LOBSTERS_LIMIT = 5
+
+
+class LobstersPlugin(BasePlugin):
+    name = "lobsters"
+    display_name = "Lobsters"
 
     def fetch(self, context: PluginContext) -> FetchResult:
         try:
             xml_text = context.fetch_text(
-                "https://feeds.bbci.co.uk/news/rss.xml",
+                LOBSTERS_FEED_URL,
                 context.max_retries,
                 context.retry_delay,
             )
@@ -24,20 +28,16 @@ class HeadlinesPlugin(BasePlugin):
             for item in root.findall(".//item"):
                 title = " ".join((item.findtext("title") or "").split())
                 link = (item.findtext("link") or "").strip()
-                if not title:
-                    continue
-                source_element = item.find("source")
-                source = " ".join((source_element.text or "").split()) if source_element is not None else ""
-                details = (f"Source: {source}",) if source else ()
-                items.append(RankedItem(title=title, link=link, details=details))
-                if len(items) == 3:
+                if title and link:
+                    items.append(RankedItem(title=title, link=link))
+                if len(items) == LOBSTERS_LIMIT:
                     break
             if not items:
-                return FetchResult(ok=False, error="feed returned no headlines")
+                return FetchResult(ok=False, error="feed returned no Lobsters stories")
             return FetchResult(ok=True, data=items)
         except Exception as error:
-            print(f"  ⚠ Headlines unavailable: {error}")
+            print(f"  ⚠ Lobsters unavailable: {error}")
             return FetchResult(ok=False, error=str(error))
 
     def render(self, data: list[RankedItem]) -> str:
-        return section("📰  HEADLINES", render_ranked_list(data, max_results=3))
+        return section("🔴  LOBSTERS", render_ranked_list(data, max_results=LOBSTERS_LIMIT))

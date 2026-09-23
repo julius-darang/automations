@@ -8,6 +8,7 @@ module under this directory, then add its `name` to the root `plugins.yaml`.
 
 ```python
 from plugins.base import BasePlugin, FetchResult, PluginContext
+from plugins.formatting import RankedItem, render_ranked_list, section
 
 
 class ExamplePlugin(BasePlugin):
@@ -19,13 +20,14 @@ class ExamplePlugin(BasePlugin):
 
     def fetch(self, context: PluginContext) -> FetchResult:
         try:
-            data = context.fetch_json("https://example.com/data", context.max_retries, context.retry_delay)
-            return FetchResult(ok=True, data=data)
+            payload = context.fetch_json("https://example.com/data", context.max_retries, context.retry_delay)
+            items = [RankedItem(row["title"], row.get("url", "")) for row in payload]
+            return FetchResult(ok=True, data=items)
         except Exception as error:
             return FetchResult(ok=False, error=str(error))
 
-    def render(self, data) -> str:
-        return f"EXAMPLE\n{data}"
+    def render(self, data: list[RankedItem]) -> str:
+        return section("EXAMPLE", render_ranked_list(data))
 ```
 
 Required class attributes:
@@ -38,8 +40,9 @@ Required methods:
 - `should_run(context)`: pure applicability/schedule decision; no network I/O.
 - `fetch(context)`: fetch and normalize provider data. It must return
   `FetchResult` and catch provider errors internally.
-- `render(data)`: turn a successful payload into a plain-text block. It is not
-  called when `fetch()` returns `ok=False`.
+- `render(data)`: turn normalized data into a plain-text block. Prefer the
+  shape-based helpers in `plugins.formatting` for ranked lists, key/value rows,
+  and quotes. It is not called when `fetch()` returns `ok=False`.
 
 A successful partial result can report individual missing items:
 

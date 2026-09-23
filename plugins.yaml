@@ -3,6 +3,16 @@ enabled:
   - weather
   - quote
   - headlines
+  # - hackernews
+  # - lobsters
+  # - devto
+  # - arxiv
+  # - openalex
+  # - air_quality
+  # - uv_index
+  # - fx
+  # - sunrise
+  # - public_holiday
   - ai_pricing
   - crypto
   # - ph_stocks   # enable only when TWELVEDATA_API_KEY is configured
@@ -13,6 +23,9 @@ settings:
   LAT: "11.6083"
   LON: "125.4358"
   TIMEZONE: "Asia/Manila"
+  FX_BASE: "USD"
+  FX_QUOTE: "PHP"
+  HOLIDAY_COUNTRY: "PH"
 
 # AI news runs daily; pricing defaults to Mondays. Use --pricing to override.
 schedules:

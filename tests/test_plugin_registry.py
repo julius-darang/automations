@@ -18,7 +18,10 @@ class RegistryTests(unittest.TestCase):
     def test_auto_discovery_finds_all_default_plugins(self):
         self.assertEqual(
             set(discover_plugins()),
-            {"weather", "quote", "headlines", "ai_pricing", "crypto", "ph_stocks"},
+            {
+                "weather", "quote", "headlines", "hackernews", "lobsters", "devto", "arxiv", "openalex", "air_quality",
+                "ai_pricing", "crypto", "ph_stocks", "uv_index", "fx", "sunrise", "public_holiday",
+            },
         )
 
     def test_yaml_order_and_environment_override(self):

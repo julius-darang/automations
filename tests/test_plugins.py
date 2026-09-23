@@ -9,13 +9,23 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from plugins.ai_pricing import AIPricingPlugin, AI_GENERAL_NEWS_FEED_URL, AI_MODEL_NEWS_FEED_URL  # noqa: E402
+from plugins.air_quality import AirQualityPlugin  # noqa: E402
+from plugins.arxiv import ArxivPlugin  # noqa: E402
 from plugins.base import PluginContext  # noqa: E402
 from plugins.crypto import CryptoPlugin, MarketQuote  # noqa: E402
 from plugins.formatting import shorten_url  # noqa: E402
+from plugins.hackernews import HackerNewsPlugin, HN_ITEM_URL, HN_TOP_STORIES_URL  # noqa: E402
+from plugins.fx import FXPlugin  # noqa: E402
+from plugins.devto import DEVTO_ARTICLES_URL, DevToPlugin  # noqa: E402
+from plugins.lobsters import LOBSTERS_FEED_URL, LobstersPlugin  # noqa: E402
+from plugins.openalex import OpenAlexPlugin  # noqa: E402
 from plugins.headlines import HeadlinesPlugin  # noqa: E402
 from plugins.ph_stocks import PHStocksPlugin  # noqa: E402
 from plugins.quote import QuotePlugin  # noqa: E402
 from plugins.weather import WeatherPlugin  # noqa: E402
+from plugins.uv_index import UVIndexPlugin  # noqa: E402
+from plugins.sunrise import SunrisePlugin  # noqa: E402
+from plugins.public_holiday import PublicHolidayPlugin  # noqa: E402
 
 
 class PluginTests(unittest.TestCase):
@@ -44,6 +54,126 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_public_holiday_finds_today(self):
+        result = PublicHolidayPlugin().fetch(self.context(
+            json_response=[{"date": "2026-09-21", "localName": "A Holiday"}],
+            settings={"HOLIDAY_COUNTRY": "PH"},
+            now=datetime(2026, 9, 21, 8, 0),
+        ))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data.value, "A Holiday")
+        self.assertIn("A Holiday", PublicHolidayPlugin().render(result.data))
+
+    def test_sunrise_normalizes_daily_values(self):
+        result = SunrisePlugin().fetch(self.context(json_response={
+            "daily": {
+                "sunrise": ["2026-09-23T05:30"],
+                "sunset": ["2026-09-23T17:45"],
+            },
+        }))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].label, "Sunrise")
+        self.assertIn("Sunset: 2026-09-23T17:45", SunrisePlugin().render(result.data))
+
+    def test_fx_normalizes_configured_rate(self):
+        result = FXPlugin().fetch(self.context(
+            json_response={"rates": {"PHP": 58.25}},
+            settings={"FX_BASE": "USD", "FX_QUOTE": "PHP"},
+        ))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data.label, "USD/PHP")
+        self.assertIn("58.25", FXPlugin().render(result.data))
+
+    def test_uv_index_normalizes_key_value(self):
+        result = UVIndexPlugin().fetch(self.context(json_response={"current": {"uv_index": 6.2}}))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data.value, 6.2)
+        self.assertIn("UV index: 6.2", UVIndexPlugin().render(result.data))
+
+    def test_air_quality_normalizes_key_values(self):
+        result = AirQualityPlugin().fetch(self.context(json_response={
+            "current": {"us_aqi": 22, "pm2_5": 4.5},
+        }))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].label, "US AQI")
+        self.assertIn("PM2.5: 4.5", AirQualityPlugin().render(result.data))
+
+    def test_openalex_normalizes_authors_and_citations(self):
+        payload = {"results": [{
+            "title": "A research paper",
+            "doi": "https://doi.org/10.1234/example",
+            "authorships": [{"author": {"display_name": "Researcher"}}],
+            "cited_by_count": 12,
+        }]}
+        result = OpenAlexPlugin().fetch(self.context(json_response=payload))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "A research paper")
+        self.assertIn("Authors: Researcher", result.data[0].details)
+        self.assertIn("Citations: 12", result.data[0].details)
+
+    def test_arxiv_normalizes_authors_and_abstract(self):
+        xml = """<feed xmlns="http://www.w3.org/2005/Atom">
+          <entry>
+            <id>https://arxiv.org/abs/1234.5678</id>
+            <title>A useful paper</title>
+            <author><name>First Author</name></author>
+            <author><name>Second Author</name></author>
+            <summary>A short abstract for the paper.</summary>
+          </entry>
+        </feed>"""
+        result = ArxivPlugin().fetch(self.context(text_response=xml))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "A useful paper")
+        self.assertIn("Authors: First Author, Second Author", result.data[0].details)
+        self.assertIn("Abstract: A short abstract", result.data[0].details[1])
+        self.assertIn("https://arxiv.org/abs/1234.5678", ArxivPlugin().render(result.data))
+
+    def test_lobsters_normalizes_ranked_items(self):
+        context = self.context(text_response=(
+            "<rss><channel>"
+            "<item><title>One</title><link>https://lobste.rs/s/one</link></item>"
+            "<item><title>Two</title><link>https://lobste.rs/s/two</link></item>"
+            "</channel></rss>"
+        ))
+        result = LobstersPlugin().fetch(context)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "One")
+        self.assertIn("LOBSTERS", LobstersPlugin().render(result.data))
+
+    def test_devto_normalizes_tags_and_links(self):
+        context = self.context(json_response=[{
+            "title": "A Dev article",
+            "url": "https://dev.to/example/article",
+            "tag_list": ["python", "webdev"],
+        }])
+        result = DevToPlugin().fetch(context)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].details, ("Tags: python, webdev",))
+        self.assertIn("https://dev.to/example/article", DevToPlugin().render(result.data))
+
+    def test_hackernews_normalizes_ranked_items(self):
+        payloads = {
+            HN_TOP_STORIES_URL: [101, 102],
+            HN_ITEM_URL.format(story_id=101): {
+                "type": "story",
+                "title": "First story",
+                "url": "https://example.com/first",
+                "score": 42,
+            },
+            HN_ITEM_URL.format(story_id=102): {
+                "type": "story",
+                "title": "Second story",
+                "score": 10,
+            },
+        }
+        context = self.context(json_response=lambda url: payloads[url])
+        result = HackerNewsPlugin().fetch(context)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].title, "First story")
+        self.assertEqual(result.data[0].details, ("Score: 42",))
+        self.assertIn("HACKER NEWS", HackerNewsPlugin().render(result.data))
+        self.assertIn("news.ycombinator.com/item?id=102", result.data[1].link)
 
     def test_weather_fetch_and_render(self):
         context = self.context(json_response={
@@ -116,8 +246,8 @@ class PluginTests(unittest.TestCase):
         result = AIPricingPlugin().fetch(context)
         self.assertTrue(result.ok)
         self.assertIn("pricing", result.data)
-        self.assertIn("OpenAI releases a new GPT model", result.data["model_news"] or "")
-        self.assertNotIn("OpenAI releases a new GPT model", result.data["general_news"])
+        self.assertTrue(any(item.title == "OpenAI releases a new GPT model" for item in result.data["model_news"]))
+        self.assertFalse(any(item.title == "OpenAI releases a new GPT model" for item in result.data["general_news"]))
         self.assertIn("AI MODEL PRICING", AIPricingPlugin().render(result.data))
 
     def test_ai_plugin_skips_pricing_off_schedule(self):

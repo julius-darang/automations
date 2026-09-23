@@ -88,6 +88,11 @@ enabled:
   # - ph_stocks
 ```
 
+Additional optional plugins are available but disabled by default: `hackernews`,
+`lobsters`, `devto`, `arxiv`, `openalex`, `air_quality`, `uv_index`, `fx`,
+`sunrise`, and `public_holiday`. Enable them one at a time as you decide what
+belongs in your brief.
+
 The committed `settings` are fork-safe defaults for location and timezone.
 Environment variables override them at runtime. `TWELVEDATA_API_KEY` remains an
 optional secret and is required only when `ph_stocks` is enabled. `ai_pricing`
