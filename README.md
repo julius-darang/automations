@@ -27,6 +27,11 @@ may be delayed or from an earlier trading day; always check their source timesta
 | --- | --- | --- |
 | Weather | [Open-Meteo](https://open-meteo.com/en/pricing) | Free for noncommercial use within limits |
 | Quote | [ZenQuotes](https://zenquotes.io/) | Public endpoint |
+| Quotable | [Quotable](https://github.com/lukePeavey/quotable) | Optional public quote API |
+| Stoic quote | [Stoic Quotes](https://stoic-quotes.com/) | Public endpoint |
+| Dad joke | [icanhazdadjoke](https://icanhazdadjoke.com/) | Public JSON endpoint |
+| Word of the day | [Merriam-Webster RSS](https://www.merriam-webster.com/wotd/feed/rss2) | Public feed |
+| Bible verse | [Bible API](https://bible-api.com/) | Public-domain WEB translation |
 | Headlines | [BBC RSS](https://feeds.bbci.co.uk/news/rss.xml) | Public feed |
 | AI news | [Google News RSS](https://news.google.com/) | Public feeds |
 | Weekly model prices | [OpenRouter catalog](https://openrouter.ai/models) | Public catalog; no model inference calls |
@@ -94,13 +99,14 @@ enabled:
   # - ph_stocks
 ```
 
-Additional optional plugins are available but disabled by default: `hackernews`,
-`reddit`, `papers_with_code`, `semantic_scholar`, `github_trending`, `product_hunt`,
-`lobsters`, `devto`, `arxiv`, `openalex`, `air_quality`, `uv_index`, `fx`, `sunrise`,
-and `public_holiday`. Enable them one at a time as you decide what belongs in your
-brief. Reddit, Semantic Scholar, GitHub Trending, and Product Hunt expose settings
-for source queries/limits in `plugins.yaml`; environment variables with the same
-names override those defaults.
+Additional optional plugins are available but disabled by default: `quotable`,
+`stoic`, `dad_joke`, `word_of_day`, `bible_verse`, `hackernews`, `reddit`,
+`papers_with_code`, `semantic_scholar`, `github_trending`, `product_hunt`, `lobsters`,
+`devto`, `arxiv`, `openalex`, `air_quality`, `uv_index`, `fx`, `sunrise`, and
+`public_holiday`. Enable them one at a time as you decide what belongs in your brief.
+Reddit, Semantic Scholar, GitHub Trending, and Product Hunt expose settings for
+source queries/limits in `plugins.yaml`; environment variables with the same names
+override those defaults.
 
 The committed `settings` are fork-safe defaults for location and timezone.
 Environment variables override them at runtime. `TWELVEDATA_API_KEY` remains an

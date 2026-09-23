@@ -22,6 +22,11 @@ from plugins.openalex import OpenAlexPlugin  # noqa: E402
 from plugins.headlines import HeadlinesPlugin  # noqa: E402
 from plugins.ph_stocks import PHStocksPlugin  # noqa: E402
 from plugins.quote import QuotePlugin  # noqa: E402
+from plugins.quotable import QuotablePlugin  # noqa: E402
+from plugins.stoic import StoicPlugin  # noqa: E402
+from plugins.dad_joke import DadJokePlugin  # noqa: E402
+from plugins.word_of_day import WordOfDayPlugin  # noqa: E402
+from plugins.bible_verse import BibleVersePlugin  # noqa: E402
 from plugins.weather import WeatherPlugin  # noqa: E402
 from plugins.uv_index import UVIndexPlugin  # noqa: E402
 from plugins.sunrise import SunrisePlugin  # noqa: E402
@@ -59,6 +64,46 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_quotable_and_stoic_normalize_quotes(self):
+        quotable = QuotablePlugin().fetch(self.context(json_response={
+            "content": "A useful quote.", "author": "A Writer",
+        }))
+        self.assertTrue(quotable.ok)
+        self.assertEqual(quotable.data["author"], "A Writer")
+
+        stoic = StoicPlugin().fetch(self.context(json_response={
+            "text": "A stoic quote.", "author": "Seneca",
+        }))
+        self.assertTrue(stoic.ok)
+        self.assertIn("Seneca", StoicPlugin().render(stoic.data))
+
+    def test_dad_joke_normalizes_json_with_accept_header(self):
+        result = DadJokePlugin().fetch(self.context(json_response={"joke": "A dad joke."}))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data, "A dad joke.")
+
+    def test_word_of_day_normalizes_feed_definition(self):
+        xml = """<rss><channel><item>
+          <title>compendious</title>
+          <link>https://example.com/compendious</link>
+          <description>&lt;p&gt;&lt;strong&gt;compendious&lt;/strong&gt; · adjective&lt;br /&gt;&lt;p&gt;Comprehensive and concise.&lt;/p&gt;&lt;/p&gt;</description>
+        </item></channel></rss>"""
+        result = WordOfDayPlugin().fetch(self.context(text_response=xml))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data["word"], "compendious")
+        self.assertIn("Comprehensive and concise", result.data["definition"])
+
+    def test_bible_verse_normalizes_random_verse(self):
+        result = BibleVersePlugin().fetch(self.context(json_response={
+            "random_verse": {
+                "book": "John", "chapter": 3, "verse": 16,
+                "text": "For God so loved the world.",
+            },
+        }))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data["reference"], "John 3:16")
+        self.assertIn("For God so loved", BibleVersePlugin().render(result.data))
 
     def test_product_hunt_normalizes_atom_entries(self):
         xml = """<feed xmlns="http://www.w3.org/2005/Atom">

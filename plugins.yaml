@@ -2,6 +2,11 @@
 enabled:
   - weather
   - quote
+  # - quotable
+  # - stoic
+  # - dad_joke
+  # - word_of_day
+  # - bible_verse
   - headlines
   - hackernews
   # - reddit
