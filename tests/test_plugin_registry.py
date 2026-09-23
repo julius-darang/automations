@@ -20,7 +20,7 @@ class RegistryTests(unittest.TestCase):
             set(discover_plugins()),
             {
                 "weather", "quote", "headlines", "hackernews", "lobsters", "devto", "arxiv", "openalex", "air_quality",
-                "ai_pricing", "crypto", "ph_stocks", "uv_index",
+                "ai_pricing", "crypto", "ph_stocks", "uv_index", "fx",
             },
         )
 

@@ -15,6 +15,7 @@ from plugins.base import PluginContext  # noqa: E402
 from plugins.crypto import CryptoPlugin, MarketQuote  # noqa: E402
 from plugins.formatting import shorten_url  # noqa: E402
 from plugins.hackernews import HackerNewsPlugin, HN_ITEM_URL, HN_TOP_STORIES_URL  # noqa: E402
+from plugins.fx import FXPlugin  # noqa: E402
 from plugins.devto import DEVTO_ARTICLES_URL, DevToPlugin  # noqa: E402
 from plugins.lobsters import LOBSTERS_FEED_URL, LobstersPlugin  # noqa: E402
 from plugins.openalex import OpenAlexPlugin  # noqa: E402
@@ -51,6 +52,15 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_fx_normalizes_configured_rate(self):
+        result = FXPlugin().fetch(self.context(
+            json_response={"rates": {"PHP": 58.25}},
+            settings={"FX_BASE": "USD", "FX_QUOTE": "PHP"},
+        ))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data.label, "USD/PHP")
+        self.assertIn("58.25", FXPlugin().render(result.data))
 
     def test_uv_index_normalizes_key_value(self):
         result = UVIndexPlugin().fetch(self.context(json_response={"current": {"uv_index": 6.2}}))

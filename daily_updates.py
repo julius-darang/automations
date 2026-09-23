@@ -229,7 +229,10 @@ def load_plugin_config(path: Path | str = PLUGIN_CONFIG_FILE) -> PluginFileConfi
     settings = dict(settings_raw)
     # Environment variables are the runtime override. Include known optional
     # values even when a fork has not listed them in its YAML file.
-    for name in ("CITY", "LAT", "LON", "TIMEZONE", "AI_MODEL_IDS", "MAX_RETRIES", "RETRY_DELAY"):
+    for name in (
+        "CITY", "LAT", "LON", "TIMEZONE", "AI_MODEL_IDS",
+        "FX_BASE", "FX_QUOTE", "MAX_RETRIES", "RETRY_DELAY",
+    ):
         if name in os.environ:
             settings[name] = os.environ[name]
 
@@ -267,7 +270,10 @@ def _plugin_context(
     now: datetime | None = None,
 ) -> PluginContext:
     merged_settings = dict(settings or {})
-    for name in ("CITY", "LAT", "LON", "TIMEZONE", "AI_MODEL_IDS", "MAX_RETRIES", "RETRY_DELAY"):
+    for name in (
+        "CITY", "LAT", "LON", "TIMEZONE", "AI_MODEL_IDS",
+        "FX_BASE", "FX_QUOTE", "MAX_RETRIES", "RETRY_DELAY",
+    ):
         if name in os.environ:
             merged_settings[name] = os.environ[name]
     return PluginContext(
