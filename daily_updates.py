@@ -418,7 +418,10 @@ def _shorten_urls(text: str) -> str:
     return _URL_PATTERN.sub(lambda match: shorten_url(match.group(0)), text)
 
 
-_EMAIL_HEADING_PREFIXES = ("🌤", "💬", "📰", "🤖", "🗞", "💵", "🪙", "📈", "📊")
+_EMAIL_HEADING_PREFIXES = (
+    "🌤", "💬", "📰", "🤖", "🗞", "💵", "🪙", "📈", "📊",
+    "🟠", "🔴", "🟣", "📚", "🔬", "🌫", "☀", "💱", "🌅", "🎉", "🇵🇭",
+)
 _EMAIL_CSS = """
 body { margin:0; padding:24px 12px; background:#eaf1f8; color:#142c49; font:16px/1.6 Arial, Helvetica, sans-serif; }
 a { color:#244ec9; }
@@ -467,7 +470,8 @@ def _render_html_content(text: str) -> str:
     list_open = False
     section_open = False
     story_title: str | None = None
-    story_source: str | None = None
+    story_link: str | None = None
+    story_details: list[str] = []
 
     def close_list() -> None:
         nonlocal list_open
@@ -475,25 +479,26 @@ def _render_html_content(text: str) -> str:
             parts.append("</ul>")
             list_open = False
 
-    def flush_story(url: str | None = None) -> None:
-        nonlocal list_open, story_title, story_source
+    def flush_story() -> None:
+        nonlocal list_open, story_title, story_link, story_details
         if story_title is None:
             return
         if not list_open:
             parts.append('<ul class="story-list">')
             list_open = True
         title_html = _linkify_html(story_title)
-        if url and "…" not in url:
+        if story_link and "…" not in story_link:
             title_html = (
-                f'<a class="story-title" href="{html_lib.escape(url, quote=True)}">'
+                f'<a class="story-title" href="{html_lib.escape(story_link, quote=True)}">'
                 f"{html_lib.escape(story_title)}</a>"
             )
         story_html = f"<li>{title_html}"
-        if story_source:
-            story_html += f'<span class="story-source">{_linkify_html(story_source)}</span>'
+        for detail in story_details:
+            story_html += f'<span class="story-source">{_linkify_html(detail)}</span>'
         parts.append(story_html + "</li>")
         story_title = None
-        story_source = None
+        story_link = None
+        story_details = []
 
     for line in text.splitlines():
         stripped = line.strip()
@@ -503,16 +508,16 @@ def _render_html_content(text: str) -> str:
         if stripped.startswith("• "):
             flush_story()
             story_title = stripped[2:]
-            story_source = None
             continue
         if story_title is not None:
-            if stripped.startswith("Source:"):
-                story_source = stripped
-                continue
             if _URL_PATTERN.fullmatch(stripped):
-                flush_story(stripped)
+                story_link = stripped
                 continue
-            flush_story()
+            if stripped.startswith(_EMAIL_HEADING_PREFIXES):
+                flush_story()
+            else:
+                story_details.append(stripped)
+                continue
         if stripped.startswith(_EMAIL_HEADING_PREFIXES):
             close_list()
             if section_open:
