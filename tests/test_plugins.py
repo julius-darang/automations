@@ -22,6 +22,7 @@ from plugins.headlines import HeadlinesPlugin  # noqa: E402
 from plugins.ph_stocks import PHStocksPlugin  # noqa: E402
 from plugins.quote import QuotePlugin  # noqa: E402
 from plugins.weather import WeatherPlugin  # noqa: E402
+from plugins.uv_index import UVIndexPlugin  # noqa: E402
 
 
 class PluginTests(unittest.TestCase):
@@ -50,6 +51,12 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_uv_index_normalizes_key_value(self):
+        result = UVIndexPlugin().fetch(self.context(json_response={"current": {"uv_index": 6.2}}))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data.value, 6.2)
+        self.assertIn("UV index: 6.2", UVIndexPlugin().render(result.data))
 
     def test_air_quality_normalizes_key_values(self):
         result = AirQualityPlugin().fetch(self.context(json_response={
