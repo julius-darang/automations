@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from plugins.ai_pricing import AIPricingPlugin, AI_GENERAL_NEWS_FEED_URL, AI_MODEL_NEWS_FEED_URL  # noqa: E402
+from plugins.air_quality import AirQualityPlugin  # noqa: E402
 from plugins.arxiv import ArxivPlugin  # noqa: E402
 from plugins.base import PluginContext  # noqa: E402
 from plugins.crypto import CryptoPlugin, MarketQuote  # noqa: E402
@@ -49,6 +50,14 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_air_quality_normalizes_key_values(self):
+        result = AirQualityPlugin().fetch(self.context(json_response={
+            "current": {"us_aqi": 22, "pm2_5": 4.5},
+        }))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.data[0].label, "US AQI")
+        self.assertIn("PM2.5: 4.5", AirQualityPlugin().render(result.data))
 
     def test_openalex_normalizes_authors_and_citations(self):
         payload = {"results": [{

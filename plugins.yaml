@@ -8,6 +8,7 @@ enabled:
   # - devto
   # - arxiv
   # - openalex
+  # - air_quality
   - ai_pricing
   - crypto
   # - ph_stocks   # enable only when TWELVEDATA_API_KEY is configured
