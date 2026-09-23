@@ -122,6 +122,7 @@ Clear sky ☀️ | 27.0°C | Humidity: 80%
 
 🤖  AI MODEL ADVANCES
   • A model release
+    Score: 42
     Source: OpenAI
     https://example.com/article
 
@@ -133,9 +134,20 @@ Missing data: Headlines
         self.assertIn("Daily Brief", html)
         self.assertIn("AI MODEL ADVANCES", html)
         self.assertIn('<a class="story-title" href="https://example.com/article">A model release</a>', html)
+        self.assertIn('<span class="story-source">Score: 42</span>', html)
         self.assertEqual(html.count("https://example.com/article"), 1)
         self.assertNotIn("avatar", html)
         self.assertNotIn("<svg", html)
+
+    def test_html_email_styles_all_current_plugin_headings(self):
+        headings = (
+            "🟠  HACKER NEWS", "🔴  LOBSTERS", "🟣  DEV.TO", "📚  ARXIV AI PAPERS",
+            "🔬  OPENALEX PAPERS", "🌫️  AIR QUALITY", "☀️  UV INDEX", "💱  FX RATE",
+            "🌅  SUNRISE / SUNSET", "🎉  PUBLIC HOLIDAY", "🇵🇭  PSE STOCKS",
+        )
+        body = "Good afternoon!\n📅  Wednesday, September 23, 2026\n" + "\n".join(headings)
+        html = daily_updates.build_html_email(body)
+        self.assertEqual(html.count('<section class="mail-section">'), len(headings))
 
     def test_plugin_flag_requires_dry_run(self):
         with patch.object(sys, "argv", ["daily_updates.py", "--plugin", "quote"]):
