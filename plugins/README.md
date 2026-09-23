@@ -12,6 +12,8 @@ The ranked-list and text sources are intentionally opt-in in `plugins.yaml`:
 - `dad_joke`: JSON dad-joke provider.
 - `word_of_day`: Merriam-Webster Word of the Day RSS.
 - `bible_verse`: random verse from the public-domain World English Bible.
+- `chess_puzzle`, `trivia`, `recipe`, and `cocktail`: bespoke daily challenge and
+  food/drink outputs.
 - `reddit`: technology/programming RSS; configure `REDDIT_SUBREDDITS`.
 - `papers_with_code`: public Papers With Code paper cards.
 - `semantic_scholar`: Academic Graph search; configure

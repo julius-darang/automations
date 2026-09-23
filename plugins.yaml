@@ -7,6 +7,10 @@ enabled:
   # - dad_joke
   # - word_of_day
   # - bible_verse
+  # - chess_puzzle
+  # - trivia
+  # - recipe
+  # - cocktail
   - headlines
   - hackernews
   # - reddit

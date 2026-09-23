@@ -32,6 +32,10 @@ may be delayed or from an earlier trading day; always check their source timesta
 | Dad joke | [icanhazdadjoke](https://icanhazdadjoke.com/) | Public JSON endpoint |
 | Word of the day | [Merriam-Webster RSS](https://www.merriam-webster.com/wotd/feed/rss2) | Public feed |
 | Bible verse | [Bible API](https://bible-api.com/) | Public-domain WEB translation |
+| Chess puzzle | [Lichess](https://lichess.org/api) | Public daily puzzle API |
+| Trivia | [Open Trivia DB](https://opentdb.com/) | Public API |
+| Recipe | [TheMealDB](https://www.themealdb.com/) | Public random-recipe API |
+| Cocktail | [TheCocktailDB](https://www.thecocktaildb.com/) | Public random-cocktail API |
 | Headlines | [BBC RSS](https://feeds.bbci.co.uk/news/rss.xml) | Public feed |
 | AI news | [Google News RSS](https://news.google.com/) | Public feeds |
 | Weekly model prices | [OpenRouter catalog](https://openrouter.ai/models) | Public catalog; no model inference calls |
@@ -100,10 +104,11 @@ enabled:
 ```
 
 Additional optional plugins are available but disabled by default: `quotable`,
-`stoic`, `dad_joke`, `word_of_day`, `bible_verse`, `hackernews`, `reddit`,
-`papers_with_code`, `semantic_scholar`, `github_trending`, `product_hunt`, `lobsters`,
-`devto`, `arxiv`, `openalex`, `air_quality`, `uv_index`, `fx`, `sunrise`, and
-`public_holiday`. Enable them one at a time as you decide what belongs in your brief.
+`stoic`, `dad_joke`, `word_of_day`, `bible_verse`, `chess_puzzle`, `trivia`, `recipe`,
+`cocktail`, `hackernews`, `reddit`, `papers_with_code`, `semantic_scholar`,
+`github_trending`, `product_hunt`, `lobsters`, `devto`, `arxiv`, `openalex`,
+`air_quality`, `uv_index`, `fx`, `sunrise`, and `public_holiday`. Enable them one at
+a time as you decide what belongs in your brief.
 Reddit, Semantic Scholar, GitHub Trending, and Product Hunt expose settings for
 source queries/limits in `plugins.yaml`; environment variables with the same names
 override those defaults.

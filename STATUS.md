@@ -21,7 +21,8 @@ with `CITY`, `LAT`, `LON`, and `TIMEZONE` environment variables. The email inclu
 model advances, separate Google AI top stories, and OpenRouter model pricing on Mondays for a
 configurable three-model watchlist, without capability ranks. News links are preserved and
 deduplicated inside the AI plugin. Optional quote/text sources include Quotable, Stoic Quotes, dad jokes, Word of the Day,
-and Bible verses; ranked-list sources include Reddit, Papers With Code, Semantic Scholar,
+Bible verses, chess puzzles, trivia, recipes, and cocktails; ranked-list sources include
+Reddit, Papers With Code, Semantic Scholar,
 GitHub Trending, and Product Hunt. Market rows include source
 timestamps. Missing data appears
 in the email and Actions summary. SMTP timeouts and partial-recipient failure handling protect

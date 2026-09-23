@@ -27,6 +27,10 @@ from plugins.stoic import StoicPlugin  # noqa: E402
 from plugins.dad_joke import DadJokePlugin  # noqa: E402
 from plugins.word_of_day import WordOfDayPlugin  # noqa: E402
 from plugins.bible_verse import BibleVersePlugin  # noqa: E402
+from plugins.chess_puzzle import ChessPuzzlePlugin  # noqa: E402
+from plugins.trivia import TriviaPlugin  # noqa: E402
+from plugins.recipe import RecipePlugin  # noqa: E402
+from plugins.cocktail import CocktailPlugin  # noqa: E402
 from plugins.weather import WeatherPlugin  # noqa: E402
 from plugins.uv_index import UVIndexPlugin  # noqa: E402
 from plugins.sunrise import SunrisePlugin  # noqa: E402
@@ -64,6 +68,45 @@ class PluginTests(unittest.TestCase):
             fetch_text=fetch_text,
             secrets={"TWELVEDATA_API_KEY": api_key},
         )
+
+    def test_custom_plugins_normalize_chess_trivia_recipe_and_cocktail(self):
+        chess = ChessPuzzlePlugin().fetch(self.context(json_response={
+            "puzzle": {"id": "abc", "rating": 1500, "themes": ["mateIn2"], "fen": "8/8/8/8/8/8/8/8 w - - 0 1"},
+        }))
+        self.assertTrue(chess.ok)
+        self.assertIn("https://lichess.org/training/abc", ChessPuzzlePlugin().render(chess.data))
+
+        trivia = TriviaPlugin().fetch(self.context(json_response={
+            "results": [{
+                "category": "Science &amp; Nature",
+                "difficulty": "easy",
+                "question": "What is 2 &amp; 2?",
+                "correct_answer": "4",
+                "incorrect_answers": ["3", "5", "6"],
+            }],
+        }))
+        self.assertTrue(trivia.ok)
+        self.assertIn("What is 2 & 2?", TriviaPlugin().render(trivia.data))
+
+        recipe = RecipePlugin().fetch(self.context(json_response={
+            "meals": [{
+                "strMeal": "Test Soup", "strCategory": "Soup", "strArea": "Test",
+                "strIngredient1": "Water", "strMeasure1": "1 cup",
+                "strInstructions": "Boil it.",
+            }],
+        }))
+        self.assertTrue(recipe.ok)
+        self.assertIn("1 cup Water", RecipePlugin().render(recipe.data))
+
+        cocktail = CocktailPlugin().fetch(self.context(json_response={
+            "drinks": [{
+                "strDrink": "Test Tonic", "strCategory": "Cocktail", "strGlass": "Glass",
+                "strAlcoholic": "Alcoholic", "strIngredient1": "Gin", "strMeasure1": "2 oz",
+                "strInstructions": "Stir it.",
+            }],
+        }))
+        self.assertTrue(cocktail.ok)
+        self.assertIn("2 oz Gin", CocktailPlugin().render(cocktail.data))
 
     def test_quotable_and_stoic_normalize_quotes(self):
         quotable = QuotablePlugin().fetch(self.context(json_response={
