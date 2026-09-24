@@ -43,4 +43,4 @@ delivery reporting. Recipients come from the gitignored `recipients.txt` locally
 
 ## Pointers
 - Workflow: `.github/workflows/` · deps `requirements.txt` · config `plugins.yaml` · plugin contract `plugins/README.md`.
-- Own `.git` at this path (origin `github.com/julius-darang/automations`).
+- Own `.git` at this path (origin `github.com/julius-darang/email-brief`).
