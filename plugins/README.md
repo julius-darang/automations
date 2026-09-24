@@ -64,9 +64,13 @@ Required methods:
 - `should_run(context)`: pure applicability/schedule decision; no network I/O.
 - `fetch(context)`: fetch and normalize provider data. It must return
   `FetchResult` and catch provider errors internally.
-- `render(data)`: turn normalized data into a plain-text block. Prefer the
-  shape-based helpers in `plugins.formatting` for ranked lists, key/value rows,
-  and quotes. It is not called when `fetch()` returns `ok=False`.
+- `render(data)`: return a plain-text section. Use `section(title, body)` so the
+  title/body boundary is also available as explicit email metadata. For a plugin
+  with multiple subsections, combine `section(...)` values with `combine_sections()`.
+  Prefer the shape-based helpers in `plugins.formatting` for ranked lists,
+  key/value rows, and quotes. The section helpers remain `str`-compatible, so
+  plain-text output and existing callers continue to work. `render()` is not
+  called when `fetch()` returns `ok=False`.
 
 A successful partial result can report individual missing items:
 

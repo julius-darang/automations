@@ -18,7 +18,7 @@ import yaml
 
 from plugins import PluginRegistryError, discover_plugins, instantiate_plugins
 from plugins.base import BasePlugin, FetchResult, PluginBlock, PluginContext
-from plugins.formatting import SEPARATOR, shorten_url
+from plugins.formatting import EmailSection, SEPARATOR, shorten_url
 from plugins.http import fetch_json as _http_fetch_json
 from plugins.http import fetch_text as _http_fetch_text
 from plugins.legacy import (
@@ -411,11 +411,15 @@ def run_plugins(
             add_missing([plugin.display_name])
             continue
 
+        sections = tuple(getattr(text, "sections", ()))
+        if not sections:
+            sections = (EmailSection(title=plugin.display_name, body=text),)
         blocks.append(PluginBlock(
             name=plugin.name,
             display_name=plugin.display_name,
             text=text,
             group=plugin.section_group,
+            sections=sections,
         ))
         print(f"  ✓ {plugin.display_name} loaded")
 
@@ -439,11 +443,6 @@ def _shorten_urls(text: str) -> str:
     return _URL_PATTERN.sub(lambda match: shorten_url(match.group(0)), text)
 
 
-_EMAIL_HEADING_PREFIXES = (
-    "🌤", "💬", "📰", "🤖", "🗞", "💵", "🪙", "📈", "📊",
-    "🟠", "🔴", "🟣", "📚", "🔬", "🌫", "☀", "💱", "🌅", "🎉", "🇵🇭",
-    "🗣", "🏛", "😄", "📖", "📜", "♟", "🧠", "🍽", "🍸", "🔵", "📄", "🧪", "🐙", "🚀",
-)
 _EMAIL_CSS = """
 body { margin:0; padding:24px 12px; background:#eaf1f8; color:#142c49; font:16px/1.6 Arial, Helvetica, sans-serif; }
 a { color:#244ec9; }
@@ -455,8 +454,10 @@ a { color:#244ec9; }
 .greeting { margin:20px 0 4px; font-size:17px; }
 .mail-section { padding:20px 0; border-bottom:1px solid #e0e7ef; }
 .mail-section h2 { margin:0 0 10px; color:#52677e; font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+.mail-subsection { padding:12px 0; border-top:1px solid #edf1f5; }
+.mail-subsection h3 { margin:0 0 8px; color:#52677e; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
 .detail { margin:6px 0; }
-.story-list { margin:0; padding-left:20px; }
+.story-list, .content-list { margin:6px 0; padding-left:22px; }
 .story-list li { margin:0 0 12px; padding-left:2px; }
 .story-title { font-weight:600; text-decoration:none; }
 .story-source { display:block; margin:2px 0 0; color:#52677e; font-size:11px; }
@@ -488,26 +489,30 @@ def _linkify_html(text: str) -> str:
 
 
 def _render_html_content(text: str) -> str:
+    """Render one section body without guessing section titles from its text."""
     parts: list[str] = []
     list_open = False
-    section_open = False
+    list_class: str | None = None
     story_title: str | None = None
     story_link: str | None = None
     story_details: list[str] = []
 
     def close_list() -> None:
-        nonlocal list_open
+        nonlocal list_open, list_class
         if list_open:
             parts.append("</ul>")
             list_open = False
+            list_class = None
 
     def flush_story() -> None:
-        nonlocal list_open, story_title, story_link, story_details
+        nonlocal list_open, list_class, story_title, story_link, story_details
         if story_title is None:
             return
-        if not list_open:
+        if list_class != "story-list":
+            close_list()
             parts.append('<ul class="story-list">')
             list_open = True
+            list_class = "story-list"
         title_html = _linkify_html(story_title)
         if story_link and "…" not in story_link:
             title_html = (
@@ -526,40 +531,76 @@ def _render_html_content(text: str) -> str:
         stripped = line.strip()
         if not stripped or stripped == SEPARATOR:
             flush_story()
+            close_list()
             continue
         if stripped.startswith("• "):
             flush_story()
+            if list_class != "story-list":
+                close_list()
             story_title = stripped[2:]
             continue
         if story_title is not None:
             if _URL_PATTERN.fullmatch(stripped):
                 story_link = stripped
                 continue
-            if stripped.startswith(_EMAIL_HEADING_PREFIXES):
-                flush_story()
-            else:
-                story_details.append(stripped)
-                continue
-        if stripped.startswith(_EMAIL_HEADING_PREFIXES):
-            close_list()
-            if section_open:
-                parts.append("</section>")
-            parts.append('<section class="mail-section">')
-            parts.append(f"<h2>{_linkify_html(stripped)}</h2>")
-            section_open = True
+            story_details.append(stripped)
+            continue
+        if stripped.startswith("- "):
+            if list_class != "content-list":
+                close_list()
+                parts.append('<ul class="content-list">')
+                list_open = True
+                list_class = "content-list"
+            parts.append(f"<li>{_linkify_html(stripped[2:])}</li>")
+            continue
+        close_list()
+        if stripped.startswith("Source:") or _URL_PATTERN.fullmatch(stripped):
+            parts.append(f'<p class="story-source">{_linkify_html(stripped)}</p>')
+        elif " • " in stripped:
+            parts.append(f'<p class="market-row">{_linkify_html(stripped)}</p>')
         else:
-            close_list()
-            if stripped.startswith("Source:") or _URL_PATTERN.fullmatch(stripped):
-                parts.append(f'<span class="story-source">{_linkify_html(stripped)}</span>')
-            elif " • " in stripped:
-                parts.append(f'<p class="market-row">{_linkify_html(stripped)}</p>')
-            else:
-                parts.append(f'<p class="detail">{_linkify_html(stripped)}</p>')
+            parts.append(f'<p class="detail">{_linkify_html(stripped)}</p>')
     flush_story()
     close_list()
-    if section_open:
-        parts.append("</section>")
     return "\n".join(parts)
+
+
+def _render_email_section(section: EmailSection, nested: bool = False) -> str:
+    tag = "div" if nested else "section"
+    css_class = "mail-subsection" if nested else "mail-section"
+    heading_tag = "h3" if nested else "h2"
+    parts = [
+        f'<{tag} class="{css_class}">',
+        f"<{heading_tag}>{html_lib.escape(section.title)}</{heading_tag}>",
+    ]
+    if section.body.strip():
+        parts.append(_render_html_content(section.body))
+    parts.extend(_render_email_section(child, nested=True) for child in section.children)
+    parts.append(f"</{tag}>")
+    return "\n".join(parts)
+
+
+def email_sections_for_blocks(blocks: list[PluginBlock]) -> tuple[EmailSection, ...]:
+    """Build the email hierarchy from plugin metadata, including the market group."""
+    result: list[EmailSection] = []
+    index = 0
+    while index < len(blocks):
+        block = blocks[index]
+        if block.group == "market":
+            children: list[EmailSection] = []
+            while index < len(blocks) and blocks[index].group == "market":
+                market_block = blocks[index]
+                children.extend(market_block.sections or (
+                    EmailSection(title=market_block.display_name, body=market_block.text),
+                ))
+                index += 1
+            result.append(EmailSection(title="📈  MARKET UPDATE", children=tuple(children)))
+            continue
+        result.extend(block.sections or (
+            EmailSection(title=block.display_name, body=block.text),
+        ))
+        index += 1
+    return tuple(result)
 
 
 def _email_document(
@@ -598,7 +639,11 @@ def _email_document(
 </html>"""
 
 
-def build_html_email(body: str, subject: str = "Daily Brief") -> str:
+def build_html_email(
+    body: str,
+    subject: str = "Daily Brief",
+    sections: tuple[EmailSection, ...] | list[EmailSection] | None = None,
+) -> str:
     date_text = ""
     missing: list[str] = []
     content_lines: list[str] = []
@@ -612,7 +657,11 @@ def build_html_email(body: str, subject: str = "Daily Brief") -> str:
             missing = [item.strip() for item in stripped.removeprefix("Missing data:").split(";") if item.strip()]
         else:
             content_lines.append(line)
-    return _email_document(subject, date_text, _render_html_content("\n".join(content_lines)), missing)
+    if sections is None:
+        content = _render_html_content("\n".join(content_lines))
+    else:
+        content = "\n".join(_render_email_section(item) for item in sections)
+    return _email_document(subject, date_text, content, missing)
 
 
 def build_plugin_body(
@@ -793,7 +842,7 @@ def main() -> None:
     raw_body = build_plugin_body(cfg, day_str, date_str, blocks, missing)
     subject = f"Daily Brief & Market Update — {day_str}, {date_str}"
     body = _shorten_urls(raw_body)
-    html_body = build_html_email(raw_body, subject)
+    html_body = build_html_email(raw_body, subject, email_sections_for_blocks(blocks))
 
     if args.dry_run:
         print(f"\n{'=' * 60}")

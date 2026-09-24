@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 import daily_updates  # noqa: E402
 from plugins import discover_plugins  # noqa: E402
 from plugins.base import BasePlugin, FetchResult, PluginContext  # noqa: E402
+from plugins.formatting import section  # noqa: E402
 
 
 class RegistryTests(unittest.TestCase):
@@ -51,6 +52,28 @@ class RegistryTests(unittest.TestCase):
             path.write_text("enabled: [not_real]\n")
             with self.assertRaisesRegex(ValueError, r"Unknown plugin name.*weather"):
                 daily_updates.load_plugin_config(path)
+
+    def test_run_plugins_preserves_explicit_email_section_metadata(self):
+        class StructuredPlugin(BasePlugin):
+            name = "structured"
+            display_name = "Structured"
+
+            def fetch(self, context):
+                return FetchResult(True, data="payload")
+
+            def render(self, data):
+                return section("🧪  STRUCTURED", f"Payload: {data}")
+
+        context = PluginContext(settings={}, timezone="UTC", lat=0, lon=0, city="Test")
+        blocks, missing = daily_updates.run_plugins([StructuredPlugin()], context)
+        self.assertEqual(missing, [])
+        self.assertEqual(blocks[0].sections, (daily_updates.EmailSection("🧪  STRUCTURED", "Payload: payload"),))
+        html = daily_updates.build_html_email(
+            "Brief",
+            sections=daily_updates.email_sections_for_blocks(blocks),
+        )
+        self.assertIn('<h2>🧪  STRUCTURED</h2>', html)
+        self.assertIn("Payload: payload", html)
 
     def test_plugin_failure_does_not_stop_following_plugin(self):
         class BrokenPlugin(BasePlugin):
@@ -129,7 +152,14 @@ Clear sky ☀️ | 27.0°C | Humidity: 80%
 Missing data: Headlines
 
 — Your Agent"""
-        html = daily_updates.build_html_email(body, "Daily Brief — Monday")
+        sections = (
+            daily_updates.EmailSection("🌤  WEATHER — Test City", "Clear sky ☀️ | 27.0°C"),
+            daily_updates.EmailSection(
+                "🤖  AI MODEL ADVANCES",
+                "  • A model release\n    Score: 42\n    Source: OpenAI\n    https://example.com/article",
+            ),
+        )
+        html = daily_updates.build_html_email(body, "Daily Brief — Monday", sections)
         self.assertIn('<main class="mail">', html)
         self.assertIn("Daily Brief", html)
         self.assertIn("AI MODEL ADVANCES", html)
@@ -149,9 +179,53 @@ Missing data: Headlines
             "🍸  COCKTAIL", "🔵  REDDIT TECH", "📄  PAPERS WITH CODE",
             "🧪  SEMANTIC SCHOLAR", "🐙  GITHUB TRENDING", "🚀  PRODUCT HUNT",
         )
-        body = "Good afternoon!\n📅  Wednesday, September 23, 2026\n" + "\n".join(headings)
-        html = daily_updates.build_html_email(body)
+        body = "Good afternoon!\n📅  Wednesday, September 23, 2026"
+        sections = tuple(daily_updates.EmailSection(heading, "Content") for heading in headings)
+        html = daily_updates.build_html_email(body, sections=sections)
         self.assertEqual(html.count('<section class="mail-section">'), len(headings))
+        for heading in headings:
+            self.assertIn(f"<h2>{heading}</h2>", html)
+
+    def test_html_renders_ranked_items_as_one_list(self):
+        section = daily_updates.EmailSection(
+            "📰  HEADLINES",
+            "  • First story\n    Source: News\n    https://example.com/first\n"
+            "  • Second story\n    Source: News\n    https://example.com/second",
+        )
+        html = daily_updates.build_html_email("Brief", sections=(section,))
+        self.assertEqual(html.count('<ul class="story-list">'), 1)
+        self.assertEqual(html.count('<li>'), 2)
+        self.assertIn('href="https://example.com/first"', html)
+        self.assertIn('href="https://example.com/second"', html)
+
+    def test_html_structure_comes_from_plugin_metadata_and_groups_markets(self):
+        blocks = [
+            daily_updates.PluginBlock(
+                "ai_pricing", "AI updates", "AI text",
+                sections=(
+                    daily_updates.EmailSection("🤖  AI MODEL ADVANCES", "Story"),
+                    daily_updates.EmailSection("🗞️  AI TOP STORIES", "Another story"),
+                ),
+            ),
+            daily_updates.PluginBlock(
+                "crypto", "Crypto", "Crypto text", "market",
+                (daily_updates.EmailSection("🪙  CRYPTO", "BTC: $100"),),
+            ),
+            daily_updates.PluginBlock(
+                "ph_stocks", "PH stocks", "Stocks text", "market",
+                (daily_updates.EmailSection("🇵🇭  PSE STOCKS", "BDO: ₱100"),),
+            ),
+        ]
+        sections = daily_updates.email_sections_for_blocks(blocks)
+        self.assertEqual(len(sections), 3)
+        self.assertEqual(sections[0].title, "🤖  AI MODEL ADVANCES")
+        self.assertEqual(sections[1].title, "🗞️  AI TOP STORIES")
+        self.assertEqual(sections[2].title, "📈  MARKET UPDATE")
+        self.assertEqual([child.title for child in sections[2].children], ["🪙  CRYPTO", "🇵🇭  PSE STOCKS"])
+        html = daily_updates.build_html_email("📅  Today", sections=sections)
+        self.assertEqual(html.count('<section class="mail-section">'), 3)
+        self.assertEqual(html.count('<div class="mail-subsection">'), 2)
+        self.assertFalse(hasattr(daily_updates, "_EMAIL_HEADING_PREFIXES"))
 
     def test_plugin_flag_requires_dry_run(self):
         with patch.object(sys, "argv", ["daily_updates.py", "--plugin", "quote"]):

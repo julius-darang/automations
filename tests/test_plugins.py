@@ -424,7 +424,12 @@ class PluginTests(unittest.TestCase):
         self.assertIn("pricing", result.data)
         self.assertTrue(any(item.title == "OpenAI releases a new GPT model" for item in result.data["model_news"]))
         self.assertFalse(any(item.title == "OpenAI releases a new GPT model" for item in result.data["general_news"]))
-        self.assertIn("AI MODEL PRICING", AIPricingPlugin().render(result.data))
+        rendered = AIPricingPlugin().render(result.data)
+        self.assertIn("AI MODEL PRICING", rendered)
+        self.assertEqual(
+            [item.title for item in rendered.sections],
+            ["🤖  AI MODEL ADVANCES", "🗞️  AI TOP STORIES", "💵  AI MODEL PRICING"],
+        )
 
     def test_ai_plugin_skips_pricing_off_schedule(self):
         calls = []

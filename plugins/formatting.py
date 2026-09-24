@@ -27,6 +27,26 @@ class KeyValue:
     unit: str = ""
 
 
+@dataclass(frozen=True)
+class EmailSection:
+    """Explicit email structure for one titled section and optional children."""
+
+    title: str
+    body: str = ""
+    children: tuple["EmailSection", ...] = ()
+
+
+class SectionText(str):
+    """Plain-text section with structured email metadata attached."""
+
+    sections: tuple[EmailSection, ...]
+
+    def __new__(cls, value: str, sections: tuple[EmailSection, ...]):
+        instance = super().__new__(cls, value)
+        instance.sections = sections
+        return instance
+
+
 def render_ranked_list(items: Sequence[RankedItem], max_results: int = 5) -> str:
     """Render a bounded list of title, metadata, and link items."""
     lines: list[str] = []
@@ -67,5 +87,12 @@ def shorten_url(url: str, max_length: int = 72) -> str:
     return f"{prefix}{path[:available]}…{suffix}"
 
 
-def section(title: str, body: str) -> str:
-    return f"{title}\n{body}"
+def section(title: str, body: str) -> SectionText:
+    """Render plain text and preserve title/body boundaries for HTML email."""
+    return SectionText(f"{title}\n{body}", (EmailSection(title=title, body=body),))
+
+
+def combine_sections(*parts: SectionText) -> SectionText:
+    """Combine titled sections without losing their HTML structure."""
+    sections = tuple(section for part in parts for section in part.sections)
+    return SectionText("\n\n".join(str(part) for part in parts), sections)

@@ -6,6 +6,7 @@ import math
 
 from .base import BasePlugin, FetchResult, PluginContext
 from .crypto import MarketQuote, render_market_rows
+from .formatting import section
 
 
 STOCK_SYMBOLS = [
@@ -51,7 +52,8 @@ def fetch_stock_prices(context: PluginContext) -> dict[str, MarketQuote]:
 
 
 def render_stock_section(prices: dict[str, MarketQuote]) -> str:
-    return "\n".join(render_market_rows("🇵🇭  PSE STOCKS", prices, STOCK_ORDER, "₱", "As of"))
+    rows = render_market_rows("🇵🇭  PSE STOCKS", prices, STOCK_ORDER, "₱", "As of")
+    return section(rows[0], "\n".join(rows[1:])) if rows else ""
 
 
 class PHStocksPlugin(BasePlugin):
