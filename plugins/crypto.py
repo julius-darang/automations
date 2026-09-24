@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import yfinance as yf
 
 from .base import BasePlugin, FetchResult, PluginContext
-from .formatting import KeyValue, render_kv
+from .formatting import KeyValue, render_kv, section
 
 
 CRYPTO_SYMBOLS = [
@@ -72,13 +72,14 @@ def render_market_rows(
 
 
 def render_crypto_section(prices: dict[str, MarketQuote]) -> str:
-    return "\n".join(render_market_rows(
+    rows = render_market_rows(
         "🪙  CRYPTO — change vs previous daily close",
         prices,
         CRYPTO_ORDER,
         "$",
         "Daily bar",
-    ))
+    )
+    return section(rows[0], "\n".join(rows[1:])) if rows else ""
 
 
 def build_market_section(crypto: dict, stocks: dict) -> str:

@@ -9,6 +9,7 @@ from typing import Any, Callable, ClassVar, Mapping
 
 from .http import fetch_json as default_fetch_json
 from .http import fetch_text as default_fetch_text
+from .formatting import EmailSection
 
 
 JsonFetcher = Callable[[str, int, int, Mapping[str, str] | None], dict | list]
@@ -61,12 +62,13 @@ class PluginContext:
 
 @dataclass(frozen=True)
 class PluginBlock:
-    """Rendered output plus the generic layout group used by the composer."""
+    """Rendered output, explicit email sections, and layout group."""
 
     name: str
     display_name: str
     text: str
     group: str | None = None
+    sections: tuple[EmailSection, ...] = ()
 
 
 class BasePlugin(ABC):

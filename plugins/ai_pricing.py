@@ -14,7 +14,7 @@ from urllib.parse import quote_plus
 from zoneinfo import ZoneInfo
 
 from .base import BasePlugin, FetchResult, PluginContext
-from .formatting import RankedItem, SEPARATOR, render_ranked_list
+from .formatting import RankedItem, SEPARATOR, combine_sections, render_ranked_list, section
 
 
 AI_MODEL_NEWS_QUERY = (
@@ -291,11 +291,20 @@ class AIPricingPlugin(BasePlugin):
         return FetchResult(True, data=data, error="; ".join(errors) or None, missing=tuple(missing))
 
     def render(self, data: dict[str, object]) -> str:
-        parts: list[str] = []
+        parts = []
         if "model_news" in data:
-            parts += ["🤖  AI MODEL ADVANCES", SEPARATOR, _render_news_items(data["model_news"])]
+            parts.append(section(
+                "🤖  AI MODEL ADVANCES",
+                f"{SEPARATOR}\n\n{_render_news_items(data['model_news'])}",
+            ))
         if "general_news" in data:
-            parts += ["🗞️  AI TOP STORIES", SEPARATOR, _render_news_items(data["general_news"])]
+            parts.append(section(
+                "🗞️  AI TOP STORIES",
+                f"{SEPARATOR}\n\n{_render_news_items(data['general_news'])}",
+            ))
         if data.get("pricing"):
-            parts += ["💵  AI MODEL PRICING", SEPARATOR, str(data["pricing"])]
-        return "\n\n".join(parts)
+            parts.append(section(
+                "💵  AI MODEL PRICING",
+                f"{SEPARATOR}\n\n{data['pricing']}",
+            ))
+        return combine_sections(*parts)
