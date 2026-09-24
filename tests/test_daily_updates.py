@@ -265,7 +265,7 @@ class DailyUpdatesTests(unittest.TestCase):
     def test_partial_delivery_fails_and_saves_fallback(self):
         config = self.make_config(recipients=("ok@example.com", "refused@example.com"))
         with tempfile.TemporaryDirectory() as directory, patch.object(daily_updates.smtplib, "SMTP_SSL") as smtp:
-            smtp.return_value.__enter__.return_value.sendmail.return_value = {
+            smtp.return_value.sendmail.return_value = {
                 "refused@example.com": (550, b"Rejected")}
             original_directory = os.getcwd()
             try:
@@ -453,9 +453,9 @@ class DailyUpdatesTests(unittest.TestCase):
     def test_send_email_includes_clean_html_and_plain_alternatives(self):
         config = self.make_config()
         with patch.object(daily_updates.smtplib, "SMTP_SSL") as smtp:
-            smtp.return_value.__enter__.return_value.sendmail.return_value = {}
+            smtp.return_value.sendmail.return_value = {}
             self.assertTrue(daily_updates.send_email(config, "Subject", "Plain body", "<p>Clean body</p>"))
-        message = smtp.return_value.__enter__.return_value.sendmail.call_args.args[2]
+        message = smtp.return_value.sendmail.call_args.args[2]
         self.assertIn("multipart/alternative", message)
         from email import message_from_string
         parsed = message_from_string(message)
@@ -469,13 +469,17 @@ class DailyUpdatesTests(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory() as directory:
                 os.chdir(directory)
-                with patch.object(daily_updates.smtplib, "SMTP_SSL", side_effect=OSError("offline")):
+                with patch.object(daily_updates.smtplib, "SMTP_SSL", side_effect=OSError("offline")), \
+                     patch.object(daily_updates.smtplib, "SMTP", side_effect=OSError("offline")):
                     result = daily_updates.send_email(config, "Subject", "Body")
 
                 fallback_files = list(Path(directory).glob("email_fallback_*.txt"))
                 self.assertFalse(result)
                 self.assertEqual(len(fallback_files), 1)
-                self.assertEqual(fallback_files[0].read_text(), "Subject: Subject\n\nBody")
+                saved = fallback_files[0].read_text()
+                self.assertTrue(saved.startswith("Subject: Subject\n\nBody"))
+                self.assertIn("at connect (port 587)", saved)
+                self.assertIn("Not submitted", saved)
         finally:
             os.chdir(original_directory)
 

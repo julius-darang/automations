@@ -6,7 +6,7 @@ status: active
 stack: Python 3.11 · GitHub Actions cron · SMTP
 entry: python daily_updates.py --dry-run · GitHub Actions daily schedule
 has_repo: true
-updated: 2026-09-23
+updated: 2026-09-24
 ---
 
 # automations
@@ -30,9 +30,11 @@ delivery reporting. Recipients come from the gitignored `recipients.txt` locally
 `RECIPIENT_EMAILS` secret in CI, with `RECEIVER_EMAIL` as a fallback.
 
 ## Next action
-- Review and merge the optional ranked-list source plugins and safe workflow preview.
-- Run the manual workflow once with `dry_run=true` before any real production send.
-- Migrate `crypto` and `ph_stocks` to the shared key/value renderer.
+- Review the SMTP disconnect fix: verified port-587 fallback only before submission,
+  stage-specific failure artifacts, and successful-acceptance handling despite QUIT failure.
+- Run 36012857079 failed with `Connection unexpectedly closed`; the old logs do not
+  identify the SMTP stage. Check delivery before resending; no automatic resend was made.
+- Continue provider reliability work (Quotable TLS failure, research API rate limits).
 - Verify Twelve Data PSE entitlement before relying on the optional stock section.
 
 ## Conventions

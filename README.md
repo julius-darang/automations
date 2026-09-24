@@ -163,11 +163,19 @@ other sections. The email footer and GitHub Actions job summary identify missing
 data; the summary also records delivery status. A feed with no new matching
 stories is reported as empty, not as a delivery failure.
 
-SMTP has a 30-second timeout. A send failure saves the email to
+SMTP uses verified TLS and a 30-second socket timeout. It tries Gmail port 465
+first; a transient connection/authentication-transport failure **before submission**
+gets one fallback attempt on port 587 with STARTTLS. Invalid credentials and TLS
+certificate errors are not retried. A disconnect after submission starts is never
+automatically retried, because delivery may already have occurred. A failed QUIT
+after SMTP acceptance is reported as cleanup trouble, not a failed delivery.
+
+A send failure saves the email and stage-specific diagnostics to
 `email_fallback_*.txt`, fails the run, and retains that file as a 30-day artifact.
-Partial recipient rejection also fails the run and records refused addresses in
-the fallback. **Do not blindly rerun a partial or ambiguous send:** some recipients
-may already have received it. Check the fallback and logs first.
+Partial recipient rejection records refused addresses in the fallback.
+**Do not blindly rerun a partial or ambiguous send:** some recipients may already
+have received it. Check Gmail Sent, recipients, the fallback, and logs first.
+Missing plugin data (including Quotable certificate failures) does not block SMTP.
 
 If `NTFY_TOPIC` is set, failed runs notify that topic. This cannot detect a job
 that never starts. For that, optionally create one free

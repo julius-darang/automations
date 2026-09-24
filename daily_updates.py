@@ -5,6 +5,7 @@ import html as html_lib
 import re
 import os
 import smtplib
+import ssl
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -767,26 +768,82 @@ def send_email(
     msg.attach(MIMEText(body, "plain", "utf-8"))
     msg.attach(MIMEText(html_body or build_html_email(body, subject), "html", "utf-8"))
 
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as server:
+    message = msg.as_string()
+    tls_context = ssl.create_default_context()
+    for port in (465, 587):
+        server = None
+        stage = "connect"
+        send_started = False
+        accepted = False
+        try:
+            print(f"SMTP: connecting to smtp.gmail.com:{port}", flush=True)
+            if port == 465:
+                server = smtplib.SMTP_SSL("smtp.gmail.com", port, timeout=30, context=tls_context)
+            else:
+                server = smtplib.SMTP("smtp.gmail.com", port, timeout=30)
+                stage = "STARTTLS"
+                server.starttls(context=tls_context)
+            stage = "authenticate"
+            print(f"SMTP: authenticating on port {port}", flush=True)
             server.login(cfg.sender_email, cfg.sender_password)
-            refused = server.sendmail(cfg.sender_email, list(cfg.recipients), msg.as_string())
+            stage = "sendmail"
+            print(f"SMTP: submitting message on port {port}", flush=True)
+            send_started = True
+            refused = server.sendmail(cfg.sender_email, list(cfg.recipients), message)
             if refused:
                 raise RuntimeError(
                     "Email partially accepted; refused recipients: " + ", ".join(refused)
                     + ". Do not resend to all recipients."
                 )
+            accepted = True
+        except Exception as error:
+            # Retry only before sendmail: after submission starts, a disconnect
+            # can mean Gmail accepted the message but its reply was lost.
+            transient = (
+                isinstance(error, OSError) and not isinstance(error, smtplib.SMTPException)
+            ) or isinstance(error, smtplib.SMTPServerDisconnected) or (
+                isinstance(error, smtplib.SMTPConnectError) and 400 <= error.smtp_code < 500
+            )
+            transient = transient and not isinstance(error, ssl.SSLError)
+            detail = str(error)
+            if cfg.sender_password:
+                detail = detail.replace(cfg.sender_password, "[redacted]")
+            diagnostic = f"{type(error).__name__} at {stage} (port {port}): {detail}"
+            if port == 465 and not send_started and transient:
+                print(f"⚠ SMTP setup failed: {diagnostic}. Trying TLS on port 587.", flush=True)
+                continue
+            if not send_started:
+                outcome = "Not submitted to SMTP; no message was sent by this attempt."
+            elif isinstance(error, (smtplib.SMTPRecipientsRefused, smtplib.SMTPSenderRefused, smtplib.SMTPDataError)):
+                outcome = "SMTP rejected this submission. Inspect the server response before retrying."
+            else:
+                outcome = "Delivery partial or unknown. Check recipients/Gmail Sent before resending."
+            print(f"❌ Failed to send email: {diagnostic}", flush=True)
+            print(outcome, flush=True)
+            fallback_path = f"email_fallback_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+            with open(fallback_path, "w", encoding="utf-8") as output:
+                output.write(f"Subject: {subject}\n\n{body}")
+                output.write(f"\n\nDelivery warning: {diagnostic}\n{outcome}\n")
+            print(f"📝 Email saved to {fallback_path}")
+            return False
+        finally:
+            if server is not None:
+                try:
+                    if accepted:
+                        server.quit()
+                    else:
+                        server.close()
+                except Exception:
+                    # QUIT failure cannot undo a successful DATA acceptance.
+                    if accepted:
+                        print("⚠ SMTP cleanup failed after acceptance; do not resend.")
+                    try:
+                        server.close()
+                    except Exception:
+                        pass
         print(f"✅ Email sent to {', '.join(cfg.recipients)}")
         return True
-    except Exception as error:
-        print(f"❌ Failed to send email: {error}")
-        fallback_path = f"email_fallback_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-        with open(fallback_path, "w", encoding="utf-8") as output:
-            output.write(f"Subject: {subject}\n\n{body}")
-            if "partially accepted" in str(error):
-                output.write(f"\n\nDelivery warning: {error}\n")
-        print(f"📝 Email saved to {fallback_path}")
-        return False
+    return False
 
 
 def write_run_summary(missing: list[str], delivery: str) -> None:
