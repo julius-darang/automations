@@ -1,0 +1,86 @@
+/* Extends the landing page's existing blue-and-white visual language. */
+[hidden] { display:none !important; }
+button, input, select { font:inherit; }
+button, select, input[type="checkbox"] { cursor:pointer; }
+button { color:var(--ink); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline:3px solid var(--blue); outline-offset:3px; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }
+.builder { padding-block:76px; }
+.builder .section-heading { margin-bottom:24px; }
+.demo-kicker { margin:0 0 12px; color:var(--blue); font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.demo-notice { padding:16px 20px; margin:0 0 28px; border-left:3px solid var(--blue); background:#f5f8fc; font-size:14px; color:var(--muted); }
+.demo-notice strong { color:var(--ink); }
+.demo-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); gap:36px; align-items:start; }
+.demo-controls { min-width:0; }
+.demo-controls h3, .demo-preview-heading { font-size:20px; margin:0 0 8px; letter-spacing:-.5px; }
+.demo-help { color:var(--muted); font-size:13px; margin:0 0 16px; }
+.demo-filters { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.demo-filters label { font-size:12px; font-weight:600; }
+.demo-filters input, .demo-filters select { width:100%; min-width:0; padding:10px; margin-top:5px; min-height:44px; border:1px solid #a9bdd4; border-radius:6px; background:white; color:var(--ink); }
+.demo-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin:18px 0 8px; font-size:13px; }
+.demo-toolbar > div { display:flex; gap:8px; }
+.demo-toolbar button { border:1px solid #a9bdd4; border-radius:6px; background:white; padding:8px 12px; min-height:44px; }
+.demo-toolbar button:hover, .reorder-buttons button:hover { background:#e5edf9; }
+.filter-count { font-size:11px; color:var(--muted); margin:4px 0 12px; }
+.plugin-list { list-style:none; padding:4px; margin:0; max-height:700px; overflow-y:auto; overscroll-behavior:contain; border-block:1px solid var(--line); scrollbar-gutter:stable; }
+.plugin-row { position:relative; display:grid; grid-template-columns:36px minmax(0,1fr) 44px; gap:10px; padding:15px 4px; border-bottom:1px solid var(--line); background:#f5f8fc; border-left:3px solid transparent; }
+.plugin-row.is-enabled { background:white; border-left-color:var(--blue); }
+.plugin-row:last-child { border-bottom:0; }
+.drag-handle { align-self:start; min-height:44px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--muted); font-size:25px; cursor:grab; touch-action:none; user-select:none; }
+.is-dragging .drag-handle { cursor:grabbing; }
+.is-dragging { user-select:none; }
+.plugin-row.is-picked { box-shadow:inset 0 0 0 2px var(--blue); background:#e5edf9; }
+.plugin-row.drop-before::before, .plugin-row.drop-after::after { content:""; position:absolute; height:4px; background:var(--blue); left:0; right:0; z-index:1; }
+.plugin-row.drop-before::before { top:-2px; }
+.plugin-row.drop-after::after { bottom:-2px; }
+.plugin-label { display:flex; align-items:center; gap:10px; min-height:32px; font-size:14px; font-weight:650; cursor:pointer; }
+.plugin-label input { width:20px; height:20px; flex-shrink:0; accent-color:var(--blue); }
+.plugin-info { min-width:0; overflow-wrap:anywhere; }
+.plugin-info p { color:var(--muted); font-size:12px; line-height:1.5; margin:4px 0; }
+.plugin-info small { display:block; color:var(--muted); font-size:11px; }
+.plugin-info .plugin-caveat { margin-top:6px; font-style:italic; }
+.reorder-buttons { display:flex; flex-direction:column; gap:4px; }
+.reorder-buttons button { width:40px; min-height:44px; background:transparent; border:1px solid var(--line); border-radius:5px; }
+.reorder-buttons button[aria-disabled="true"] { color:#738195; cursor:default; }
+.demo-preview { min-width:0; }
+.demo-email { background:white; border:1px solid #c5d3e2; border-radius:12px; overflow:hidden; }
+.demo-email-header { padding:22px 26px; border-bottom:1px solid var(--line); }
+.demo-email-header h3 { margin:0; font-size:24px; letter-spacing:-.6px; }
+.demo-email-header p { margin:4px 0 0; color:var(--muted); font-size:12px; }
+.demo-email-body { max-height:900px; overflow-y:auto; padding:0 26px; scrollbar-gutter:stable; overflow-wrap:anywhere; }
+.demo-email-section { padding:20px 0; border-bottom:1px solid #e0e7ef; font-size:14px; }
+.demo-email-section:last-child { border-bottom:0; }
+.demo-email-section h4 { margin:0 0 12px; color:var(--muted); font-size:12px; letter-spacing:.04em; text-transform:uppercase; }
+.demo-email-section h5 { margin:16px 0 6px; font-size:13px; font-weight:650; }
+.demo-email-section p { margin:6px 0; }
+.demo-email-section ul { padding-left:20px; margin:8px 0; }
+.demo-email-section li { margin:5px 0; }
+.demo-values { margin:0; }
+.demo-values > div { display:grid; grid-template-columns:minmax(90px,.8fr) minmax(0,1.2fr); gap:16px; padding:4px 0; }
+.demo-values dt { color:var(--muted); }
+.demo-values dd { margin:0; }
+.demo-email blockquote { margin:0; }
+.demo-email cite { font-size:11px; color:var(--muted); font-style:normal; }
+.demo-email-section .demo-source { margin-top:12px; color:var(--muted); font-size:11px; }
+.demo-source a { color:var(--blue); }
+.demo-email-section .demo-provider-note { font-size:11px; color:var(--muted); margin-top:8px; }
+.demo-email-footer { padding:16px 26px; border-top:1px solid var(--line); font-size:11px; color:var(--muted); }
+.demo-email-footer p { margin:0; }
+.demo-empty { padding:28px 12px; font-size:14px; color:var(--muted); }
+.catalog-summary { margin:24px 0; font-size:14px; }
+.catalog-summary p { color:var(--muted); }
+@media (max-width:900px) { .demo-layout { gap:22px; } .plugin-row { gap:6px; grid-template-columns:30px minmax(0,1fr) 42px; } }
+@media (max-width:680px) {
+  .nav { flex-wrap:wrap; gap:14px; }
+  .nav-links { width:100%; justify-content:space-between; }
+}
+@media (max-width:760px) {
+  .builder { padding-block:48px; }
+  .demo-layout { grid-template-columns:1fr; gap:30px; }
+  .plugin-list { max-height:480px; }
+  .demo-email-body { max-height:650px; }
+  .demo-notice { padding:12px 16px; }
+  .demo-email-header, .demo-email-footer { padding:20px; }
+  .demo-email-body { padding:0 20px; }
+}
+@media (max-width:380px) { .demo-filters { grid-template-columns:1fr; } .demo-values > div { grid-template-columns:1fr; gap:0; } }

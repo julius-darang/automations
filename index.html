@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A personal afternoon briefing: weather, headlines, AI updates and market data, delivered by a small open-source Python automation.">
+  <meta name="description" content="Build a personal email brief from 30 plugins: weather, news, research, markets, and more. Try the interactive demo, then run your own open-source automation.">
   <meta name="theme-color" content="#eaf1f8">
   <title>Daily Brief — Your afternoon, in one email</title>
   <style>
@@ -119,6 +119,8 @@
     }
     @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
   </style>
+  <link rel="stylesheet" href="assets/plugin-demo.css">
+  <script src="assets/plugin-demo.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -129,8 +131,9 @@
     </a>
     <nav class="nav-links" aria-label="Main navigation">
       <a class="about-link" href="#inside">What's inside</a>
+      <a href="#plugin-builder">Try the demo</a>
       <a href="#setup">Set it up</a>
-      <a href="https://github.com/julius-darang/automations">GitHub</a>
+      <a href="https://github.com/julius-darang/email-brief">GitHub</a>
     </nav>
   </header>
   <main id="main">
@@ -138,10 +141,10 @@
       <div>
         <p class="byline">A personal automation by Julius Darang</p>
         <h1 id="hero-title">Your afternoon,<br>in one email.</h1>
-        <p class="intro">The weather outside. The stories worth opening. A glance at the markets. Your daily check-in, already in your inbox.</p>
+        <p class="intro">Weather, research, markets, or a puzzle to think over. Choose from 30 plugins and put your daily check-in in the order that suits you.</p>
         <div class="actions">
-          <a class="button" href="#setup">Set up your brief</a>
-          <a class="text-link" href="#inside">Explore the briefing</a>
+          <a class="button" href="#plugin-builder">Build a sample brief</a>
+          <a class="text-link" href="#setup">Set up your own</a>
         </div>
         <div class="schedule">
           <svg viewBox="0 0 28 28" fill="none" aria-hidden="true"><circle cx="14" cy="14" r="11" stroke="currentColor" stroke-width="1.6"/><path d="M14 7v7l4 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -153,10 +156,10 @@
           <div class="mail-top"><span><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 2h12v12H2zM2 9h3l1 2h4l1-2h3" stroke="currentColor" stroke-width="1.2"/></svg>Inbox</span><span>Sample briefing</span></div>
           <div class="mail-body">
             <div class="sender"><div class="avatar" aria-hidden="true">DB</div><div><strong>Your Daily Brief</strong>To you</div></div>
-            <h2>Good afternoon, Julius.</h2>
-            <p class="mail-date">Monday, September 14, 2026</p>
+            <h2>Good afternoon!</h2>
+            <p class="mail-date">An illustrative afternoon · not a live email</p>
             <div class="weather"><div><strong>Borongan City</strong><span>Partly cloudy · Humidity 80%</span></div><div class="temperature">27°</div></div>
-            <div class="mail-section"><h3>A moment of perspective</h3><p class="story">“To belittle, you have to be little.”</p><span class="story-source">Kahlil Gibran · ZenQuotes</span></div>
+            <div class="mail-section"><h3>A moment of perspective</h3><p class="story">A short thought and its author, from your chosen quote provider.</p><span class="story-source">Sample placeholder · no quotation attributed</span></div>
             <div class="mail-section"><h3>AI model advances</h3><p class="story">A new model release, with the original story one click away.</p><span class="story-source">Example headline · Source included in your email</span></div>
             <div class="mail-section"><h3>Market snapshot</h3><dl class="prices"><div><dt>Bitcoin</dt><dd>$67,890<small>+2.3% vs previous close</small></dd></div><div><dt>BDO</dt><dd>₱145.50<small>+0.5% · Sep 11 quote</small></dd></div></dl></div>
             <p class="mail-note">Illustrative values, not live data. Full brief includes source dates and any missing-data notices.</p>
@@ -167,37 +170,91 @@
     </section>
     <section class="contents" id="inside" aria-labelledby="inside-title">
       <div class="wrap">
-        <div class="section-heading"><h2 id="inside-title">A few useful things.<br>One place to find them.</h2><p>Open it, catch up, get on with your afternoon. Choose your plugins, location and model watchlist; the automation brings the sources together.</p></div>
+        <div class="section-heading"><h2 id="inside-title">Your sources.<br>Your reading order.</h2><p>Thirty available plugins, from everyday essentials to research and downtime. Enable the ones you want in <code>plugins.yaml</code>; each provider runs independently, so missing data does not stop the rest of the brief.</p></div>
         <div class="features">
-          <div class="feature"><h3>Local weather</h3><p>Temperature, humidity and wind for Borongan—or the coordinates you choose.</p></div>
-          <div class="feature"><h3>Headlines with links</h3><p>Three BBC headlines. Open the original article whenever you want the full story.</p></div>
-          <div class="feature"><h3>AI developments</h3><p>Model advances and broader AI stories, with repeated titles filtered across both feeds.</p></div>
-          <div class="feature"><h3>A daily quote</h3><p>A short thought and its author, alongside the day's practical updates.</p></div>
-          <div class="feature"><h3>Model pricing <span class="tag">On Mondays</span></h3><p>Input and output token costs for the exact model versions on your watchlist.</p></div>
-          <div class="feature"><h3>Market updates <span class="tag">PH stocks optional</span></h3><p>BTC, ETH and SOL, plus supported PH stock quotes. Source dates keep the numbers in context.</p></div>
+          <div class="feature"><h3>Local & daily</h3><p>Weather, air quality, UV index, daylight times, and public holidays. Keep Borongan or use your own location.</p></div>
+          <div class="feature"><h3>News & discovery</h3><p>BBC headlines, Hacker News, Reddit, Lobsters, Dev.to, GitHub Trending, and Product Hunt.</p></div>
+          <div class="feature"><h3>Research & AI</h3><p>arXiv, OpenAlex, Semantic Scholar, and the legacy Papers With Code integration. AI updates combine two news feeds with a Monday pricing watchlist.</p></div>
+          <div class="feature"><h3>Quotes & learning</h3><p>ZenQuotes, Quotable, Stoic quotes, Merriam-Webster's Word of the Day, and public-domain Bible verses.</p></div>
+          <div class="feature"><h3>Markets <span class="tag">Source times included</span></h3><p>Crypto daily bars, currency exchange rates, and optional PSE quotes. PH stocks require an API key and exchange entitlement.</p></div>
+          <div class="feature"><h3>A little downtime</h3><p>A dad joke, a Lichess puzzle, trivia, a recipe, or a cocktail. Bespoke sections keep the useful details together.</p></div>
         </div>
       </div>
+    </section>
+    <section class="builder wrap" id="plugin-builder" aria-labelledby="builder-title">
+      <p class="demo-kicker">Interactive demo · sample content only</p>
+      <div class="section-heading">
+        <h2 id="builder-title">Build your<br>sample brief.</h2>
+        <p>Toggle plugins, then drag their handles to change the reading order. The preview updates here in your browser. Start with five essentials or explore the full catalog.</p>
+      </div>
+      <p class="demo-notice"><strong>Demo only.</strong> These controls do not change your email, repository, or delivery settings. No live data is fetched, nothing is sent, and changes reset when you reload the page.</p>
+      <noscript><p class="demo-notice">Enable JavaScript to use the interactive builder. The full plugin catalog and setup guide below remain available without it.</p></noscript>
+      <div id="demo-interactive" hidden>
+        <div class="demo-layout">
+          <div class="demo-controls">
+            <h3>Choose & arrange</h3>
+            <p id="reorder-help" class="demo-help">Drag the dotted handle, focus it and use the arrow keys, or use the up/down buttons. Reordering moves whole plugins; AI subsections stay together. Filters only hide controls, not preview content.</p>
+            <div class="demo-filters">
+              <label for="plugin-search">Search plugins<input id="plugin-search" type="search" placeholder="Name, source, or topic" autocomplete="off"></label>
+              <label for="plugin-category">Category<select id="plugin-category"><option value="">All categories</option></select></label>
+            </div>
+            <div class="demo-toolbar">
+              <strong id="enabled-count"></strong>
+              <div><button type="button" id="demo-reset">Reset demo</button><button type="button" id="demo-clear">Clear selection</button></div>
+            </div>
+            <p id="filter-count" class="filter-count" role="status"></p>
+            <ol id="plugin-list" class="plugin-list" aria-label="Plugin order" aria-describedby="reorder-help"></ol>
+            <p id="no-plugins" class="demo-empty" hidden>No plugins match. Try another search or category.</p>
+            <a class="text-link" href="#demo-preview">Jump to sample preview ↓</a>
+          </div>
+          <div class="demo-preview" id="demo-preview">
+            <h3 class="demo-preview-heading">Your sample email</h3>
+            <p class="demo-help">Illustrative content and prices—not live news, quotes, or provider-status checks. Scroll inside the preview to read every enabled section.</p>
+            <article class="demo-email" aria-label="Sample daily brief">
+              <header class="demo-email-header"><h3>Daily Brief</h3><p>Preview only · no recipients · nothing will be sent</p></header>
+              <div id="demo-sections" class="demo-email-body" tabindex="0" role="region" aria-label="Scrollable sample email sections"></div>
+              <div class="demo-email-footer"><p>In a real brief, unavailable sources appear in a missing-data notice. Sample content here does not guarantee provider access.</p></div>
+            </article>
+          </div>
+        </div>
+        <p id="demo-announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+      </div>
+      <details class="catalog-summary">
+        <summary>All 30 plugins & access notes</summary>
+        <p><strong>Local & daily:</strong> Weather, air quality, UV index, sunrise & sunset, public holiday.</p>
+        <p><strong>Quotes & learning:</strong> Daily quote (ZenQuotes), Quotable, Stoic quote, Word of the Day, Bible verse.</p>
+        <p><strong>News & research:</strong> Headlines (BBC), Hacker News, Reddit tech, Lobsters, Dev.to, arXiv, OpenAlex, Papers With Code, Semantic Scholar, GitHub Trending, Product Hunt, AI updates & pricing.</p>
+        <p><strong>Markets:</strong> Crypto, PH stocks, exchange rate.</p>
+        <p><strong>Puzzles & downtime:</strong> Dad joke, chess puzzle, trivia, recipe, cocktail.</p>
+        <p>Sources have their own terms and limits. Quotable has known endpoint/TLS issues; research APIs can rate-limit requests. Papers With Code redirects to Hugging Face and its integration needs review. PH stocks need Twelve Data PSE entitlement; Semantic Scholar supports an optional API key. The builder uses offline samples even when a provider is unavailable.</p>
+      </details>
     </section>
     <section class="setup wrap" id="setup" aria-labelledby="setup-title">
       <div class="setup-intro">
         <h2 id="setup-title">Make it part of<br>your afternoon.</h2>
         <p>Runs from your own GitHub repository and sends through Gmail. A small Python script does the work.</p>
-        <a class="button" href="https://github.com/julius-darang/automations#setup">Read the setup guide</a>
+        <a class="button" href="https://github.com/julius-darang/email-brief#setup">Read the setup guide</a>
         <div class="details" style="margin-top:34px">
           <details><summary>Can I run it for free?</summary><p>Yes, for a personal briefing using a public repository and sources within their free limits. Standard GitHub Actions runners are free for public repositories; Open-Meteo's free endpoint is for noncommercial use. A free Twelve Data key does not guarantee PH stock access. No paid AI inference is needed.</p></details>
-          <details><summary>What if a source or delivery fails?</summary><p>The email lists missing data and keeps the useful sections. Failed or partially accepted sends save a fallback. Optional ntfy alerts report failed runs; a Healthchecks monitor can catch runs that never start. Check delivery details before resending.</p></details>
+          <details><summary>What if a source or delivery fails?</summary><p>The email lists missing data and keeps the useful sections. SMTP uses verified TLS, with a port-587 fallback for transient failures before submission. Partial or uncertain deliveries are not automatically retried. Failure artifacts record the delivery stage; check them and Gmail Sent before resending. Optional ntfy and Healthchecks integrations help monitor runs.</p></details>
+          <details><summary>Does this demo change my real email?</summary><p>No. Toggles and ordering exist only in this page's memory. No provider calls, credentials, configuration writes, or email sending are connected to the demo. Reload or choose Reset demo to restore the sample.</p></details>
+          <details><summary>How do I preview safely?</summary><p>Run <code>python daily_updates.py --dry-run</code>, or select <code>dry_run</code> when starting the GitHub Actions workflow. Preview runs do not send email or ping the delivery monitor. The production email includes explicit sections and a plain-text alternative.</p></details>
           <details><summary>Can I change what I receive?</summary><p>Edit the tracked <code>plugins.yaml</code> file to enable sections and choose their order. Set your city, coordinates, timezone and exact model IDs in its settings or environment overrides. Preview the result locally before enabling delivery; the README includes the commands.</p></details>
         </div>
       </div>
       <ol class="steps">
         <li><div><h3>Copy the project to GitHub</h3><p>Use your own repository for the script and daily workflow. A public repository keeps standard runner usage free.</p></div></li>
-        <li><div><h3>Connect your Gmail sender</h3><p>Create a Gmail app password with two-step verification enabled. Save it and your recipient addresses in GitHub repository secrets.</p></div></li>
+        <li><div><h3>Connect your Gmail sender</h3><p>Enable two-step verification and create a Google App Password for the sender account. Save the full Gmail address as <code>SENDER_EMAIL</code> and the app password—not your normal password—as <code>SENDER_PASSWORD</code>. Store recipients in repository secrets too.</p></div></li>
         <li><div><h3>Choose your plugins and settings</h3><p>Edit <code>plugins.yaml</code> to choose sections and their order. Keep Borongan as your default, or choose another location. Add a stock API key only if your plan supports the exchange.</p></div></li>
-        <li><div><h3>Enable the daily workflow</h3><p>The brief is scheduled for 2:17 PM Philippine time. You can also run it manually. For missed-run alerts, connect the optional monitor in the guide.</p></div></li>
+        <li><div><h3>Preview, then enable delivery</h3><p>First run the workflow with <code>dry_run</code> selected. Once the preview and credentials are ready, run without it to send. The daily schedule is 2:17 PM Philippine time; actual delivery may vary.</p></div></li>
       </ol>
     </section>
-    <section class="sources wrap" aria-labelledby="sources-title"><h2 id="sources-title">Built with public data</h2><div class="source-links"><a href="https://open-meteo.com/">Open-Meteo</a><a href="https://zenquotes.io/">ZenQuotes</a><a href="https://feeds.bbci.co.uk/news/rss.xml">BBC RSS</a><a href="https://news.google.com/">Google News</a><a href="https://openrouter.ai/models">OpenRouter</a><a href="https://pypi.org/project/yfinance/">yfinance</a><a href="https://twelvedata.com/pricing">Twelve Data (optional)</a></div></section>
+    <section class="sources wrap" aria-labelledby="sources-title"><h2 id="sources-title">Explore the sources</h2><div class="source-links">
+      <a href="https://open-meteo.com/">Open-Meteo</a><a href="https://date.nager.at/">Nager.Date</a><a href="https://zenquotes.io/">ZenQuotes</a><a href="https://github.com/lukePeavey/quotable">Quotable</a><a href="https://stoic-quotes.com/">Stoic Quotes</a><a href="https://www.merriam-webster.com/word-of-the-day">Merriam-Webster</a><a href="https://bible-api.com/">Bible API</a>
+      <a href="https://feeds.bbci.co.uk/news/rss.xml">BBC RSS</a><a href="https://news.google.com/">Google News</a><a href="https://news.ycombinator.com/">Hacker News</a><a href="https://www.reddit.com/">Reddit</a><a href="https://lobste.rs/">Lobsters</a><a href="https://dev.to/">Dev.to</a><a href="https://arxiv.org/">arXiv</a><a href="https://openalex.org/">OpenAlex</a><a href="https://huggingface.co/papers">Hugging Face Papers (PWC redirect)</a><a href="https://www.semanticscholar.org/">Semantic Scholar</a><a href="https://github.com/trending">GitHub Trending</a><a href="https://www.producthunt.com/">Product Hunt</a>
+      <a href="https://openrouter.ai/models">OpenRouter</a><a href="https://pypi.org/project/yfinance/">yfinance</a><a href="https://frankfurter.dev/">Frankfurter</a><a href="https://twelvedata.com/pricing">Twelve Data (optional)</a><a href="https://icanhazdadjoke.com/">icanhazdadjoke</a><a href="https://lichess.org/training/daily">Lichess</a><a href="https://opentdb.com/">Open Trivia DB</a><a href="https://www.themealdb.com/">TheMealDB</a><a href="https://www.thecocktaildb.com/">TheCocktailDB</a>
+    </div></section>
   </main>
-  <footer class="wrap"><p>Built by <a href="https://github.com/julius-darang">Julius Darang</a> for a simpler daily routine.</p><a href="https://github.com/julius-darang/automations">View the source on GitHub</a></footer>
+  <footer class="wrap"><p>Built by <a href="https://github.com/julius-darang">Julius Darang</a> for a simpler daily routine.</p><a href="https://github.com/julius-darang/email-brief">View the source on GitHub</a></footer>
 </body>
 </html>
