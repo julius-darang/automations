@@ -34,21 +34,27 @@
     { id: "cocktail", name: "Cocktail", category: "Puzzles & downtime", source: "TheCocktailDB", url: "https://www.thecocktaildb.com/", description: "A drink, ingredients, glassware, and instructions.", sample: [{ type: "text", text: "Sample citrus cooler · non-alcoholic" }, { type: "list", items: ["Soda water", "Lime", "Ice"] }, { type: "text", text: "Pour over ice and stir. Illustrative recipe; the live provider also returns alcoholic drinks." }] },
   ];
   const defaults = ["weather", "quote", "headlines", "ai_pricing", "crypto"];
-  const initialState = () => ({ order: catalog.map(p => p.id), enabled: new Set(defaults) });
-  // Target positions refer to the complete catalog, never just the filtered view.
+  const initialOrder = () => [...defaults];
+  const knownIds = new Set(catalog.map(p => p.id));
+  function setEnabled(order, id, enabled) {
+    if (!knownIds.has(id)) return [...order];
+    if (!enabled) return order.filter(key => key !== id);
+    return order.includes(id) ? [...order] : [...order, id];
+  }
+  // Only enabled plugins have positions. The library always uses catalog order.
   function move(order, id, target, after = false) {
     if (id === target || !order.includes(id) || !order.includes(target)) return [...order];
     const next = order.filter(key => key !== id);
     next.splice(next.indexOf(target) + Number(after), 0, id);
     return next;
   }
-  if (typeof module !== "undefined") module.exports = { catalog, defaults, initialState, move };
+  if (typeof module !== "undefined") module.exports = { catalog, defaults, initialOrder, setEnabled, move };
   if (typeof document === "undefined") return;
 
   const root = document.querySelector("#plugin-builder");
   if (!root) return;
   const byId = new Map(catalog.map(p => [p.id, p]));
-  let state = initialState();
+  let enabledOrder = initialOrder();
   const list = root.querySelector("#plugin-list");
   const preview = root.querySelector("#demo-sections");
   const search = root.querySelector("#plugin-search");
@@ -69,13 +75,22 @@
     live.textContent = "";
     announcementTimer = setTimeout(() => { live.textContent = message; }, 30);
   }
-  function focusControl(id, action) {
-    list.querySelector(`[data-id="${id}"] [data-action="${action}"]`)?.focus({ preventScroll: true });
+  function focusHandle(id, reveal = false) {
+    const handle = preview.querySelector(`[data-plugin="${id}"] .drag-handle`);
+    handle?.focus({ preventScroll: true });
+    if (reveal) handle?.scrollIntoView({ block: "nearest" });
   }
   function renderSample(plugin) {
     const section = el("section", undefined, "demo-email-section");
     section.dataset.plugin = plugin.id;
-    section.append(el("h4", plugin.name));
+    const heading = el("div", undefined, "demo-section-heading");
+    const handle = el("button", "⠿", "drag-handle");
+    handle.type = "button";
+    handle.setAttribute("aria-label", `Reorder ${plugin.name}`);
+    handle.setAttribute("aria-describedby", "reorder-help");
+    handle.title = "Drag to reorder, or focus and use Arrow Up / Arrow Down";
+    heading.append(handle, el("h4", plugin.name));
+    section.append(heading);
     for (const block of plugin.sample) {
       if (block.type === "kv") {
         const dl = el("dl", undefined, "demo-values");
@@ -106,150 +121,182 @@
     return section;
   }
   function renderPreview() {
-    const selected = state.order.filter(id => state.enabled.has(id));
-    count.textContent = `${selected.length} of ${catalog.length} enabled in demo`;
-    preview.replaceChildren(...selected.map(id => renderSample(byId.get(id))));
-    if (!selected.length) preview.append(el("p", "Your sample brief is empty. Enable a plugin to add its section here.", "demo-empty"));
+    const scrollTop = preview.scrollTop;
+    count.textContent = `${enabledOrder.length} of ${catalog.length} enabled in demo`;
+    preview.replaceChildren(...enabledOrder.map(id => renderSample(byId.get(id))));
+    if (!enabledOrder.length) preview.append(el("p", "Your sample brief is empty. Choose a plugin from the library to add it here.", "demo-empty"));
+    preview.scrollTop = scrollTop;
   }
-  function renderList() {
+  function renderLibrary() {
     const query = search.value.trim().toLowerCase();
-    const visible = state.order.filter(id => {
-      const p = byId.get(id);
-      return (!category.value || category.value === p.category) &&
-        `${p.name} ${p.id} ${p.description} ${p.source}`.toLowerCase().includes(query);
-    });
-    const rows = visible.map(id => {
-      const p = byId.get(id);
-      const position = state.order.indexOf(id);
+    const visible = catalog.filter(p => (!category.value || category.value === p.category) &&
+      `${p.name} ${p.id} ${p.description} ${p.source}`.toLowerCase().includes(query));
+    const rows = visible.map(p => {
       const li = el("li", undefined, "plugin-row");
-      li.dataset.id = id;
-      li.classList.toggle("is-enabled", state.enabled.has(id));
-      const handle = el("button", "⠿", "drag-handle");
-      handle.type = "button";
-      handle.dataset.action = "drag";
-      handle.setAttribute("aria-label", `Reorder ${p.name}`);
-      handle.setAttribute("aria-describedby", "reorder-help");
-      handle.title = "Drag to reorder, or use Arrow Up / Arrow Down";
+      li.dataset.id = p.id;
+      li.classList.toggle("is-enabled", enabledOrder.includes(p.id));
       const info = el("div", undefined, "plugin-info");
       const label = el("label", undefined, "plugin-label");
       const toggle = el("input");
       toggle.type = "checkbox";
-      toggle.checked = state.enabled.has(id);
-      toggle.dataset.action = "toggle";
+      toggle.checked = enabledOrder.includes(p.id);
       toggle.setAttribute("aria-label", `Enable ${p.name} in demo`);
       label.append(toggle, el("span", p.name));
-      info.append(label, el("p", p.description), el("small", `${position + 1}. ${p.category} · ${p.source}`));
+      info.append(label, el("p", p.description), el("small", `${p.category} · ${p.source}`));
       if (p.note) info.append(el("small", p.note, "plugin-caveat"));
-      const buttons = el("div", undefined, "reorder-buttons");
-      for (const [action, symbol, limit] of [["up", "↑", position === 0], ["down", "↓", position === state.order.length - 1]]) {
-        const button = el("button", symbol);
-        button.type = "button";
-        button.dataset.action = action;
-        button.setAttribute("aria-label", `Move ${p.name} ${action}`);
-        // Remain focusable after reaching a boundary; event handlers enforce it.
-        button.setAttribute("aria-disabled", String(limit));
-        buttons.append(button);
-      }
-      li.append(handle, info, buttons);
+      li.append(info);
       return li;
     });
     list.replaceChildren(...rows);
-    root.querySelector("#filter-count").textContent = `${visible.length} plugins shown · positions refer to the full list`;
+    root.querySelector("#filter-count").textContent = `${visible.length} of ${catalog.length} plugins shown`;
     root.querySelector("#no-plugins").hidden = visible.length > 0;
   }
-  function refresh() { renderList(); renderPreview(); }
-  function nudge(id, direction, focusAction) {
-    const i = state.order.indexOf(id);
-    const target = state.order[i + direction];
-    if (!target) { announce(`${byId.get(id).name} is already at the ${direction < 0 ? "top" : "bottom"}.`); return; }
-    state.order = move(state.order, id, target, direction > 0);
-    refresh();
-    focusControl(id, focusAction);
-    announce(`${byId.get(id).name} moved to position ${state.order.indexOf(id) + 1} of ${catalog.length}.`);
+  function refresh() { renderLibrary(); renderPreview(); }
+  function announcePosition(id) {
+    announce(`${byId.get(id).name} is now section ${enabledOrder.indexOf(id) + 1} of ${enabledOrder.length}.`);
   }
   list.addEventListener("change", event => {
-    if (event.target.dataset.action !== "toggle") return;
+    if (!event.target.matches('input[type="checkbox"]')) return;
+    finishDrag(true, false);
     const row = event.target.closest("[data-id]");
     const id = row.dataset.id;
-    if (event.target.checked) state.enabled.add(id); else state.enabled.delete(id);
+    enabledOrder = setEnabled(enabledOrder, id, event.target.checked);
     row.classList.toggle("is-enabled", event.target.checked);
     renderPreview();
-    announce(`${byId.get(id).name} ${event.target.checked ? "enabled" : "disabled"} in the sample.`);
+    announce(`${byId.get(id).name} ${event.target.checked ? "added to the bottom of" : "removed from"} the sample.`);
   });
-  list.addEventListener("click", event => {
-    const button = event.target.closest("button");
-    if (!button) return;
-    const action = button.dataset.action;
-    if (action === "up" || action === "down") nudge(button.closest("[data-id]").dataset.id, action === "up" ? -1 : 1, action);
-  });
-  list.addEventListener("keydown", event => {
-    if (event.target.dataset.action !== "drag" || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
+  preview.addEventListener("keydown", event => {
+    if (!event.target.matches(".drag-handle") || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
     event.preventDefault();
-    nudge(event.target.closest("[data-id]").dataset.id, event.key === "ArrowUp" ? -1 : 1, "drag");
+    finishDrag(true);
+    const id = event.target.closest("[data-plugin]").dataset.plugin;
+    const direction = event.key === "ArrowUp" ? -1 : 1;
+    const target = enabledOrder[enabledOrder.indexOf(id) + direction];
+    if (!target) { announce(`${byId.get(id).name} is already at the ${direction < 0 ? "top" : "bottom"}.`); return; }
+    enabledOrder = move(enabledOrder, id, target, direction > 0);
+    renderPreview();
+    focusHandle(id, true);
+    announcePosition(id);
   });
 
-  // Pointer events support mouse, pen, and touch without an external drag library.
-  function finishDrag(cancelled) {
-    if (!drag) return;
-    const { id, target, after, handle, pointerId, active } = drag;
-    drag = null;
-    if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
-    root.classList.remove("is-dragging");
-    if (!cancelled && active && target && target !== id) {
-      state.order = move(state.order, id, target, after);
-      refresh();
-      announce(`${byId.get(id).name} moved to position ${state.order.indexOf(id) + 1} of ${catalog.length}.`);
-    } else {
-      renderList();
-      if (active) announce("Reorder cancelled. Order unchanged.");
-    }
-    focusControl(id, "drag");
+  // Dragging is a transaction: leave DOM order intact until a valid drop. This
+  // avoids layout jumps while dragging long sections and makes cancellation safe.
+  function clearDropMarkers() {
+    preview.querySelectorAll(".drop-before, .drop-after").forEach(node => node.classList.remove("drop-before", "drop-after"));
   }
-  list.addEventListener("pointerdown", event => {
+  function visibleBounds() {
+    const bounds = preview.getBoundingClientRect();
+    return { left: Math.max(0, bounds.left), right: Math.min(innerWidth, bounds.right),
+      top: Math.max(0, bounds.top), bottom: Math.min(innerHeight, bounds.bottom) };
+  }
+  function pointerInside(bounds) {
+    return drag.x >= bounds.left && drag.x <= bounds.right && drag.y >= bounds.top && drag.y <= bounds.bottom;
+  }
+  function updateDropTarget() {
+    clearDropMarkers();
+    drag.target = null;
+    if (!pointerInside(visibleBounds())) return;
+    const sections = [...preview.querySelectorAll(".demo-email-section")].filter(node => node.dataset.plugin !== drag.id);
+    // The midpoint of each remaining section determines its insertion boundary.
+    const next = sections.find(node => {
+      const rect = node.getBoundingClientRect();
+      return drag.y < rect.top + rect.height / 2;
+    });
+    const target = next || sections.at(-1);
+    if (!target) return;
+    drag.target = target.dataset.plugin;
+    drag.after = !next;
+    target.classList.add(drag.after ? "drop-after" : "drop-before");
+  }
+  function positionDragLabel() {
+    drag.label.style.left = `${Math.max(8, Math.min(drag.x + 14, innerWidth - drag.label.offsetWidth - 8))}px`;
+    drag.label.style.top = `${Math.max(8, Math.min(drag.y + 14, innerHeight - drag.label.offsetHeight - 8))}px`;
+  }
+  function scrollDrag(time) {
+    if (!drag?.active) return;
+    const elapsed = Math.min(32, time - (drag.lastFrame ?? time));
+    drag.lastFrame = time;
+    const bounds = visibleBounds();
+    if (pointerInside(bounds)) {
+      const edge = Math.min(64, (bounds.bottom - bounds.top) / 3);
+      const speed = drag.y < bounds.top + edge ? -(1 - (drag.y - bounds.top) / edge) :
+        drag.y > bounds.bottom - edge ? 1 - (bounds.bottom - drag.y) / edge : 0;
+      preview.scrollTop += speed * elapsed * 0.8;
+    }
+    updateDropTarget();
+    positionDragLabel();
+    drag.frame = requestAnimationFrame(scrollDrag);
+  }
+  function finishDrag(cancelled, restoreFocus = true) {
+    if (!drag) return;
+    const { id, target, after, handle, pointerId, active, label, frame } = drag;
+    drag = null; // Release can emit lostpointercapture synchronously.
+    cancelAnimationFrame(frame);
+    if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+    label?.remove();
+    root.classList.remove("is-dragging");
+    preview.querySelector(".is-picked")?.classList.remove("is-picked");
+    clearDropMarkers();
+    if (!cancelled && active && target) {
+      enabledOrder = move(enabledOrder, id, target, after);
+      renderPreview();
+      announcePosition(id);
+    } else if (active) {
+      announce("Reorder cancelled. Order unchanged.");
+    }
+    if (restoreFocus) focusHandle(id);
+  }
+  preview.addEventListener("pointerdown", event => {
     const handle = event.target.closest(".drag-handle");
-    if (!handle || event.button !== 0 || drag) return;
+    if (!handle || event.button !== 0 || !event.isPrimary || drag) return;
     handle.focus({ preventScroll: true });
-    drag = { id: handle.closest("[data-id]").dataset.id, handle, pointerId: event.pointerId, startY: event.clientY, active: false, target: null, after: false };
+    drag = { id: handle.closest("[data-plugin]").dataset.plugin, handle, pointerId: event.pointerId,
+      startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, active: false, target: null, after: false };
     handle.setPointerCapture(event.pointerId);
   });
-  list.addEventListener("pointermove", event => {
+  preview.addEventListener("pointermove", event => {
     if (!drag || event.pointerId !== drag.pointerId) return;
-    if (!drag.active && Math.abs(event.clientY - drag.startY) < 5) return;
-    drag.active = true;
-    drag.handle.closest(".plugin-row").classList.add("is-picked");
-    root.classList.add("is-dragging");
-    const bounds = list.getBoundingClientRect();
-    if (event.clientY < bounds.top + 40) list.scrollTop -= 18;
-    if (event.clientY > bounds.bottom - 40) list.scrollTop += 18;
-    const rows = [...list.querySelectorAll(".plugin-row")];
-    rows.forEach(row => row.classList.remove("drop-before", "drop-after"));
-    const inside = event.clientX >= bounds.left && event.clientX <= bounds.right && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
-    const target = inside && rows.find(row => {
-      const rect = row.getBoundingClientRect();
-      return event.clientY >= rect.top && event.clientY <= rect.bottom;
-    });
-    drag.target = target ? target.dataset.id : null;
-    if (target && drag.target !== drag.id) {
-      const rect = target.getBoundingClientRect();
-      drag.after = event.clientY > rect.top + rect.height / 2;
-      target.classList.add(drag.after ? "drop-after" : "drop-before");
+    drag.x = event.clientX;
+    drag.y = event.clientY;
+    if (!drag.active) {
+      if (Math.hypot(drag.x - drag.startX, drag.y - drag.startY) < 5) return;
+      drag.active = true;
+      drag.handle.closest(".demo-email-section").classList.add("is-picked");
+      root.classList.add("is-dragging");
+      drag.label = el("div", byId.get(drag.id).name, "demo-drag-label");
+      drag.label.setAttribute("aria-hidden", "true");
+      document.body.append(drag.label);
+      drag.frame = requestAnimationFrame(scrollDrag);
+      announce(`Moving ${byId.get(drag.id).name}. Drop inside the preview, or press Escape to cancel.`);
     }
+    positionDragLabel();
+    updateDropTarget();
   });
-  list.addEventListener("pointerup", event => { if (drag?.pointerId === event.pointerId) finishDrag(false); });
-  list.addEventListener("pointercancel", () => finishDrag(true));
-  list.addEventListener("lostpointercapture", () => { if (drag) finishDrag(true); });
-  root.addEventListener("keydown", event => { if (event.key === "Escape" && drag) { event.preventDefault(); finishDrag(true); } });
+  preview.addEventListener("pointerup", event => {
+    if (drag?.pointerId !== event.pointerId) return;
+    drag.x = event.clientX;
+    drag.y = event.clientY;
+    if (drag.active) updateDropTarget();
+    finishDrag(false);
+  });
+  preview.addEventListener("pointercancel", event => { if (drag?.pointerId === event.pointerId) finishDrag(true); });
+  preview.addEventListener("lostpointercapture", event => { if (drag?.pointerId === event.pointerId) finishDrag(true); });
+  document.addEventListener("keydown", event => { if (event.key === "Escape" && drag) { event.preventDefault(); finishDrag(true); } });
+  window.addEventListener("blur", () => finishDrag(true, false));
+  document.addEventListener("visibilitychange", () => { if (document.hidden) finishDrag(true, false); });
   for (const group of new Set(catalog.map(p => p.category))) {
     const option = el("option", group); option.value = group; category.append(option);
   }
-  search.addEventListener("input", renderList);
-  category.addEventListener("change", renderList);
+  search.addEventListener("input", renderLibrary);
+  category.addEventListener("change", renderLibrary);
   root.querySelector("#demo-clear").addEventListener("click", () => {
-    state.enabled.clear(); refresh(); announce("All sample plugins disabled. Your real email is unchanged.");
+    finishDrag(true, false);
+    enabledOrder = []; refresh(); announce("All sample plugins disabled. Your real email is unchanged.");
   });
   root.querySelector("#demo-reset").addEventListener("click", () => {
-    state = initialState(); search.value = ""; category.value = ""; refresh(); list.scrollTop = 0;
-    announce("Sample reset to five selected plugins and the original demo order.");
+    finishDrag(true, false);
+    enabledOrder = initialOrder(); search.value = ""; category.value = ""; refresh(); list.scrollTop = 0; preview.scrollTop = 0;
+    announce("Sample reset to five selected plugins and their original order.");
   });
   refresh();
   root.querySelector("#demo-interactive").hidden = false;

@@ -197,11 +197,21 @@ The page needs no build step, frontend dependency, API key, or backend.
 `assets/plugin-demo.js` holds a static catalog of all 30 plugins and illustrative
 sample content; `assets/plugin-demo.css` extends the existing page styling.
 
-Visitors can toggle plugins, search/filter the controls, and reorder with a mouse,
-touch drag handle, up/down buttons, or arrow keys on a focused handle. Escape
-cancels a drag. AI's internal sections move as one plugin. Filters only affect the
-controls; disabled plugins keep their position. Reset restores the five-plugin
-sample and demo order. Clear selection leaves an empty preview.
+The left **Plugin library** only selects plugins, with search and category filters
+in a fixed catalog order. Enabling a plugin appends its section to the bottom of
+the sample email; disabling removes it. Re-enabling appends again, without restoring
+an old position. Filters never hide or reorder enabled preview sections.
+
+Reorder **inside the sample email**, using each section's dotted drag handle.
+Mouse, pen, and touch are supported; hold near the preview's top/bottom edge to
+auto-scroll. A compact label and insertion marker show the pending move. The order
+changes only on a valid drop. Escape, dropping outside, cancelled gestures, and
+loss of focus cancel the move. Selection changes, Clear, and Reset safely cancel
+any pending drag too. Keyboard users can focus a preview handle and use arrow keys;
+there are no up/down buttons. AI's internal sections move together as one plugin.
+
+One ordered list of enabled IDs drives both checkbox state and the preview.
+Reset restores the original five-plugin sample; Clear selection empties it.
 
 **This is not an email configuration UI.** Demo state stays in page memory and
 resets on reload. It never fetches providers, sends email, writes `plugins.yaml`,
@@ -225,8 +235,10 @@ NODE_PATH=/tmp/email-brief-browser-tests/node_modules node tests/browser_plugin_
 ```
 
 Alternatively set `CHROME_PATH` to a locally installed Chrome executable. The
-browser checks cover keyboard/mouse/touch ordering, filtering, empty/reset states,
-mobile overflow, no-JS fallback, and absence of external requests. Screenshots are
+browser checks cover preview-only keyboard/mouse/touch ordering, fixed library
+order, append/re-enable behavior, drop commit/cancellation, stationary edge scrolling,
+selection changes during dragging, filtering, empty/reset states, mobile overflow,
+no-JS fallback, and absence of external requests. Screenshots are
 written to `/tmp/email-brief-builder-{desktop,mobile}.png`, not the repository.
 The Python suite checks catalog IDs against automatic plugin discovery: update the
 sample catalog and static page copy when adding or removing a plugin.
