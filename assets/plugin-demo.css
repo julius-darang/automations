@@ -23,17 +23,18 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline:3px so
 .demo-toolbar button:hover { background:#e5edf9; }
 .filter-count { font-size:11px; color:var(--muted); margin:4px 0 12px; }
 .plugin-list { list-style:none; padding:4px; margin:0; max-height:700px; overflow-y:auto; overscroll-behavior:contain; border-block:1px solid var(--line); scrollbar-gutter:stable; }
-.plugin-row { padding:15px 12px; border-bottom:1px solid var(--line); background:#f5f8fc; border-left:3px solid transparent; }
+.plugin-row { padding:15px 12px; border-bottom:1px solid var(--line); background:#f5f8fc; border-left:3px solid transparent; cursor:pointer; }
+.plugin-row:hover { background:#edf3fb; }
+.plugin-row:focus-within { outline:2px solid var(--blue); outline-offset:-2px; }
 .plugin-row.is-enabled { background:white; border-left-color:var(--blue); }
+.plugin-row.is-enabled:hover { background:#f8fbff; }
 .plugin-row:last-child { border-bottom:0; }
-.drag-handle { flex-shrink:0; width:44px; min-height:44px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--muted); font-size:25px; cursor:grab; touch-action:none; user-select:none; }
+.drag-handle { flex-shrink:0; width:48px; min-height:48px; margin:-2px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--muted); font-size:25px; cursor:grab; touch-action:none; user-select:none; }
 .is-dragging .drag-handle { cursor:grabbing; }
 .is-dragging { user-select:none; }
-.demo-email-section.is-picked { outline:2px solid var(--blue); outline-offset:-2px; }
-.demo-email-section.drop-before::before, .demo-email-section.drop-after::after { content:""; position:absolute; height:4px; background:var(--blue); left:0; right:0; z-index:1; }
-.demo-email-section.drop-before::before { top:0; }
-.demo-email-section.drop-after::after { bottom:0; }
-.demo-drag-label { position:fixed; z-index:10; pointer-events:none; padding:8px 12px; border:1px solid var(--blue); border-radius:5px; background:white; color:var(--ink); font-size:13px; max-width:min(260px, calc(100vw - 16px)); overflow-wrap:anywhere; }
+.demo-email-section.is-drag-placeholder { padding:8px 0; border-bottom:0; }
+.demo-drop-placeholder { display:flex; min-height:58px; align-items:center; justify-content:center; border:2px dashed var(--blue); border-radius:6px; background:#edf3fb; color:var(--ink); font-size:13px; font-weight:650; }
+.demo-drag-label { position:fixed; z-index:10; pointer-events:none; padding:8px 12px; border:1px solid var(--blue); border-radius:5px; background:white; color:var(--ink); font-size:13px; font-weight:650; box-shadow:0 4px 16px #17345724; max-width:min(260px, calc(100vw - 16px)); overflow-wrap:anywhere; }
 .plugin-label { display:flex; align-items:center; gap:10px; min-height:32px; font-size:14px; font-weight:650; cursor:pointer; }
 .plugin-label input { width:20px; height:20px; flex-shrink:0; accent-color:var(--blue); }
 .plugin-info { min-width:0; overflow-wrap:anywhere; }

@@ -32,9 +32,11 @@ delivery reporting. Recipients come from the gitignored `recipients.txt` locally
 The root `index.html` includes a browser-only builder for all 30 plugins. The left
 library is selection-only and stays in fixed catalog order. Enabling (including
 re-enabling) appends to the sample email; disabling removes a section. Reorder
-only in the preview via section drag handles, with edge scrolling, cancellation,
-and keyboard support. No up/down buttons, provider calls, or configuration/delivery
-changes. Static CSS/JS live in `assets/`; no build step is required.
+only in the preview via enlarged section handles. A compact moving gap previews
+the destination, heading-based targets stabilize moves around long sections, and
+edge scrolling accelerates smoothly. Toggling preserves unaffected preview nodes
+and the reader's visible anchor. No up/down buttons, provider calls, or
+configuration/delivery changes. Static CSS/JS live in `assets/`; no build step is required.
 
 ## Next action
 - Review and deploy the landing-page demo; catalog parity is checked by Python tests,

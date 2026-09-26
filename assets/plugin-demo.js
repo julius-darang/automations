@@ -48,7 +48,16 @@
     next.splice(next.indexOf(target) + Number(after), 0, id);
     return next;
   }
-  if (typeof module !== "undefined") module.exports = { catalog, defaults, initialOrder, setEnabled, move };
+  function moveToIndex(order, id, index) {
+    const current = order.indexOf(id);
+    if (current < 0) return [...order];
+    const next = order.filter(key => key !== id);
+    const destination = Math.max(0, Math.min(next.length, Math.trunc(index)));
+    if (destination === current) return [...order];
+    next.splice(destination, 0, id);
+    return next;
+  }
+  if (typeof module !== "undefined") module.exports = { catalog, defaults, initialOrder, setEnabled, move, moveToIndex };
   if (typeof document === "undefined") return;
 
   const root = document.querySelector("#plugin-builder");
@@ -120,12 +129,42 @@
     if (plugin.note) section.append(el("p", plugin.note, "demo-provider-note"));
     return section;
   }
-  function renderPreview() {
-    const scrollTop = preview.scrollTop;
+  function capturePreviewAnchor(excludedId = null) {
+    const bounds = preview.getBoundingClientRect();
+    const visible = [...preview.querySelectorAll(":scope > .demo-email-section")].find(section => {
+      const rect = section.getBoundingClientRect();
+      return rect.bottom > bounds.top && rect.top < bounds.bottom;
+    });
+    const order = [...enabledOrder];
+    const visibleIndex = visible ? order.indexOf(visible.dataset.plugin) : -1;
+    const candidates = visible ? [visible.dataset.plugin, ...order.slice(visibleIndex + 1), ...order.slice(0, visibleIndex).reverse()] : order;
+    const section = candidates.map(id => preview.querySelector(`:scope > .demo-email-section[data-plugin="${id}"]`))
+      .find(node => node && node.dataset.plugin !== excludedId && node.getBoundingClientRect().bottom > bounds.top && node.getBoundingClientRect().top < bounds.bottom);
+    return section ? { id: section.dataset.plugin, offset: section.getBoundingClientRect().top - bounds.top, scrollTop: preview.scrollTop } : null;
+  }
+  function renderPreview({ anchor = capturePreviewAnchor(), rebuildIds = [] } = {}) {
+    const rebuild = new Set(rebuildIds);
     count.textContent = `${enabledOrder.length} of ${catalog.length} enabled in demo`;
-    preview.replaceChildren(...enabledOrder.map(id => renderSample(byId.get(id))));
-    if (!enabledOrder.length) preview.append(el("p", "Your sample brief is empty. Choose a plugin from the library to add it here.", "demo-empty"));
-    preview.scrollTop = scrollTop;
+    const existing = new Map([...preview.querySelectorAll(":scope > .demo-email-section")].map(section => [section.dataset.plugin, section]));
+    const wanted = new Set(enabledOrder);
+    for (const [id, section] of existing) {
+      if (!wanted.has(id) || rebuild.has(id)) section.remove();
+    }
+    preview.querySelector(":scope > .demo-empty")?.remove();
+    const sections = enabledOrder.map(id => rebuild.has(id) || !existing.has(id) ? renderSample(byId.get(id)) : existing.get(id));
+    let cursor = preview.firstElementChild;
+    for (const section of sections) {
+      if (section !== cursor) preview.insertBefore(section, cursor);
+      cursor = section.nextElementSibling;
+    }
+    if (!sections.length) preview.append(el("p", "Your sample brief is empty. Choose a plugin from the library to add it here.", "demo-empty"));
+    if (anchor) {
+      const section = preview.querySelector(`:scope > .demo-email-section[data-plugin="${anchor.id}"]`);
+      if (section) {
+        const bounds = preview.getBoundingClientRect();
+        preview.scrollTop = anchor.scrollTop + section.getBoundingClientRect().top - bounds.top - anchor.offset;
+      }
+    }
   }
   function renderLibrary() {
     const query = search.value.trim().toLowerCase();
@@ -160,68 +199,96 @@
     finishDrag(true, false);
     const row = event.target.closest("[data-id]");
     const id = row.dataset.id;
+    const anchor = capturePreviewAnchor(event.target.checked ? null : id);
     enabledOrder = setEnabled(enabledOrder, id, event.target.checked);
     row.classList.toggle("is-enabled", event.target.checked);
-    renderPreview();
+    renderPreview({ anchor });
     announce(`${byId.get(id).name} ${event.target.checked ? "added to the bottom of" : "removed from"} the sample.`);
+  });
+  list.addEventListener("click", event => {
+    const row = event.target.closest(".plugin-row");
+    if (!row || event.target.closest("input, label, button, a, select")) return;
+    const toggle = row.querySelector('input[type="checkbox"]');
+    toggle.focus({ preventScroll: true });
+    toggle.click();
   });
   preview.addEventListener("keydown", event => {
     if (!event.target.matches(".drag-handle") || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
     event.preventDefault();
-    finishDrag(true);
     const id = event.target.closest("[data-plugin]").dataset.plugin;
+    finishDrag(true);
     const direction = event.key === "ArrowUp" ? -1 : 1;
     const target = enabledOrder[enabledOrder.indexOf(id) + direction];
     if (!target) { announce(`${byId.get(id).name} is already at the ${direction < 0 ? "top" : "bottom"}.`); return; }
+    const anchor = capturePreviewAnchor();
     enabledOrder = move(enabledOrder, id, target, direction > 0);
-    renderPreview();
+    renderPreview({ anchor });
     focusHandle(id, true);
     announcePosition(id);
   });
 
-  // Dragging is a transaction: leave DOM order intact until a valid drop. This
-  // avoids layout jumps while dragging long sections and makes cancellation safe.
-  function clearDropMarkers() {
-    preview.querySelectorAll(".drop-before, .drop-after").forEach(node => node.classList.remove("drop-before", "drop-after"));
-  }
+  // The saved order is untouched until release. The source becomes a compact
+  // insertion gap that moves live so neighboring sections preview the drop.
   function visibleBounds() {
-    const bounds = preview.getBoundingClientRect();
-    return { left: Math.max(0, bounds.left), right: Math.min(innerWidth, bounds.right),
-      top: Math.max(0, bounds.top), bottom: Math.min(innerHeight, bounds.bottom) };
+    const rect = preview.getBoundingClientRect();
+    return { left: Math.max(0, rect.left), right: Math.min(innerWidth, rect.right),
+      top: Math.max(0, rect.top), bottom: Math.min(innerHeight, rect.bottom) };
   }
   function pointerInside(bounds) {
-    return drag.x >= bounds.left && drag.x <= bounds.right && drag.y >= bounds.top && drag.y <= bounds.bottom;
+    return bounds.right > bounds.left && bounds.bottom > bounds.top &&
+      drag.x >= bounds.left && drag.x <= bounds.right && drag.y >= bounds.top && drag.y <= bounds.bottom;
+  }
+  function pointerNearScrollEdge(bounds) {
+    const sideRoom = 48;
+    return bounds.right > bounds.left && bounds.bottom > bounds.top && drag.y >= bounds.top && drag.y <= bounds.bottom &&
+      drag.x >= bounds.left - sideRoom && drag.x <= bounds.right + sideRoom;
+  }
+  function insertionThresholds() {
+    // Use the pre-drag geometry, adjusted only for scrolling. This keeps target
+    // boundaries stable while the compact gap itself moves the surrounding rows.
+    const scrollDelta = (preview.scrollTop - drag.startScrollTop) + (window.scrollY - drag.startWindowScrollY);
+    return drag.baseThresholds.map(threshold => threshold - scrollDelta);
+  }
+  function setDragIndex(index, remaining) {
+    if (drag.index === index) return;
+    const before = remaining[index] || null;
+    preview.insertBefore(drag.section, before);
+    drag.index = index;
   }
   function updateDropTarget() {
-    clearDropMarkers();
-    drag.target = null;
-    if (!pointerInside(visibleBounds())) return;
-    const sections = [...preview.querySelectorAll(".demo-email-section")].filter(node => node.dataset.plugin !== drag.id);
-    // The midpoint of each remaining section determines its insertion boundary.
-    const next = sections.find(node => {
-      const rect = node.getBoundingClientRect();
-      return drag.y < rect.top + rect.height / 2;
-    });
-    const target = next || sections.at(-1);
-    if (!target) return;
-    drag.target = target.dataset.plugin;
-    drag.after = !next;
-    target.classList.add(drag.after ? "drop-after" : "drop-before");
+    const bounds = visibleBounds();
+    if (!pointerInside(bounds)) { drag.index = null; return; }
+    const remaining = [...preview.querySelectorAll(":scope > .demo-email-section")].filter(section => section !== drag.section);
+    const thresholds = insertionThresholds();
+    let index = thresholds.filter(y => drag.y >= y).length;
+    if (drag.index !== null && index !== drag.index) {
+      const boundary = index > drag.index ? thresholds[drag.index] : thresholds[index];
+      const margin = drag.pointerType === "touch" ? 12 : 7;
+      if (boundary !== undefined && Math.abs(drag.y - boundary) <= margin) index = drag.index;
+    }
+    setDragIndex(index, remaining);
   }
   function positionDragLabel() {
     drag.label.style.left = `${Math.max(8, Math.min(drag.x + 14, innerWidth - drag.label.offsetWidth - 8))}px`;
     drag.label.style.top = `${Math.max(8, Math.min(drag.y + 14, innerHeight - drag.label.offsetHeight - 8))}px`;
   }
+  function edgeScrollSpeed(y, bounds) {
+    const height = bounds.bottom - bounds.top;
+    const edge = Math.min(88, height / 2, Math.max(20, height * 0.18));
+    const upward = Math.max(0, Math.min(1, (bounds.top + edge - y) / edge));
+    const downward = Math.max(0, Math.min(1, (y - (bounds.bottom - edge)) / edge));
+    const strength = Math.max(upward, downward);
+    const direction = upward >= downward ? -1 : 1;
+    return strength ? direction * Math.min(1000, Math.max(420, height * 1.5)) * strength * strength : 0;
+  }
   function scrollDrag(time) {
     if (!drag?.active) return;
-    const elapsed = Math.min(32, time - (drag.lastFrame ?? time));
+    const elapsed = Math.min(50, time - (drag.lastFrame ?? time));
     drag.lastFrame = time;
     const bounds = visibleBounds();
-    if (pointerInside(bounds)) {
-      const edge = Math.min(64, (bounds.bottom - bounds.top) / 3);
-      const speed = drag.y < bounds.top + edge ? -(1 - (drag.y - bounds.top) / edge) :
-        drag.y > bounds.bottom - edge ? 1 - (bounds.bottom - drag.y) / edge : 0;
-      preview.scrollTop += speed * elapsed * 0.8;
+    if (pointerNearScrollEdge(bounds)) {
+      const maxScroll = preview.scrollHeight - preview.clientHeight;
+      preview.scrollTop = Math.max(0, Math.min(maxScroll, preview.scrollTop + edgeScrollSpeed(drag.y, bounds) * elapsed / 1000));
     }
     updateDropTarget();
     positionDragLabel();
@@ -229,45 +296,49 @@
   }
   function finishDrag(cancelled, restoreFocus = true) {
     if (!drag) return;
-    const { id, target, after, handle, pointerId, active, label, frame } = drag;
-    drag = null; // Release can emit lostpointercapture synchronously.
+    const { id, pointerId, active, index, label, frame } = drag;
+    drag = null; // Release may synchronously dispatch lostpointercapture.
     cancelAnimationFrame(frame);
-    if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+    if (preview.hasPointerCapture(pointerId)) preview.releasePointerCapture(pointerId);
     label?.remove();
     root.classList.remove("is-dragging");
-    preview.querySelector(".is-picked")?.classList.remove("is-picked");
-    clearDropMarkers();
-    if (!cancelled && active && target) {
-      enabledOrder = move(enabledOrder, id, target, after);
-      renderPreview();
-      announcePosition(id);
-    } else if (active) {
-      announce("Reorder cancelled. Order unchanged.");
-    }
-    if (restoreFocus) focusHandle(id);
+    const anchor = capturePreviewAnchor();
+    const committed = !cancelled && active && index !== null;
+    if (committed) enabledOrder = moveToIndex(enabledOrder, id, index);
+    renderPreview({ anchor, rebuildIds: [id] });
+    if (committed) announcePosition(id);
+    else if (active) announce("Reorder cancelled. Order unchanged.");
+    if (restoreFocus) focusHandle(id, committed);
   }
   preview.addEventListener("pointerdown", event => {
     const handle = event.target.closest(".drag-handle");
     if (!handle || event.button !== 0 || !event.isPrimary || drag) return;
     handle.focus({ preventScroll: true });
-    drag = { id: handle.closest("[data-plugin]").dataset.plugin, handle, pointerId: event.pointerId,
-      startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, active: false, target: null, after: false };
-    handle.setPointerCapture(event.pointerId);
+    const section = handle.closest(".demo-email-section");
+    const remaining = [...preview.querySelectorAll(":scope > .demo-email-section")].filter(node => node !== section);
+    drag = { id: section.dataset.plugin, section, handle, pointerId: event.pointerId, pointerType: event.pointerType,
+      baseThresholds: remaining.map(node => { const rect = node.querySelector(".demo-section-heading").getBoundingClientRect(); return rect.top + rect.height / 2; }),
+      startScrollTop: preview.scrollTop, startWindowScrollY: window.scrollY,
+      startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, active: false, index: null };
+    preview.setPointerCapture(event.pointerId);
   });
   preview.addEventListener("pointermove", event => {
     if (!drag || event.pointerId !== drag.pointerId) return;
     drag.x = event.clientX;
     drag.y = event.clientY;
     if (!drag.active) {
-      if (Math.hypot(drag.x - drag.startX, drag.y - drag.startY) < 5) return;
+      const threshold = drag.pointerType === "touch" ? 10 : 4;
+      if (Math.hypot(drag.x - drag.startX, drag.y - drag.startY) < threshold) return;
       drag.active = true;
-      drag.handle.closest(".demo-email-section").classList.add("is-picked");
+      drag.section.replaceChildren(el("div", `Drop ${byId.get(drag.id).name} here`, "demo-drop-placeholder"));
+      drag.section.classList.add("is-drag-placeholder");
+      drag.section.setAttribute("aria-hidden", "true");
       root.classList.add("is-dragging");
-      drag.label = el("div", byId.get(drag.id).name, "demo-drag-label");
+      drag.label = el("div", `Moving ${byId.get(drag.id).name}`, "demo-drag-label");
       drag.label.setAttribute("aria-hidden", "true");
       document.body.append(drag.label);
       drag.frame = requestAnimationFrame(scrollDrag);
-      announce(`Moving ${byId.get(drag.id).name}. Drop inside the preview, or press Escape to cancel.`);
+      announce(`Moving ${byId.get(drag.id).name}. Drop at the highlighted gap, or press Escape to cancel.`);
     }
     positionDragLabel();
     updateDropTarget();

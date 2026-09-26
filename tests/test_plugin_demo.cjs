@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { catalog, defaults, initialOrder, setEnabled, move } = require('../assets/plugin-demo.js');
+const { catalog, defaults, initialOrder, setEnabled, move, moveToIndex } = require('../assets/plugin-demo.js');
 
 test('catalog contains 30 distinct plugins with safe source links and samples', () => {
   assert.equal(catalog.length, 30);
@@ -35,6 +35,17 @@ test('self-drop and unknown IDs leave ordering intact', () => {
   assert.deepEqual(move(order, 'a', 'a'), order);
   assert.deepEqual(move(order, 'missing', 'b'), order);
   assert.deepEqual(move(order, 'a', 'missing'), order);
+});
+
+test('moveToIndex inserts at every boundary without duplicates or mutation', () => {
+  const order = ['a', 'b', 'c', 'd'];
+  assert.deepEqual(moveToIndex(order, 'a', 3), ['b', 'c', 'd', 'a']);
+  assert.deepEqual(moveToIndex(order, 'd', 0), ['d', 'a', 'b', 'c']);
+  assert.deepEqual(moveToIndex(order, 'b', 1), order);
+  assert.deepEqual(moveToIndex(order, 'b', -9), ['b', 'a', 'c', 'd']);
+  assert.deepEqual(moveToIndex(order, 'b', 99), ['a', 'c', 'd', 'b']);
+  assert.deepEqual(moveToIndex(order, 'missing', 0), order);
+  assert.deepEqual(order, ['a', 'b', 'c', 'd']);
 });
 
 test('enabling appends at the bottom without duplicates; disabling removes', () => {

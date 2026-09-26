@@ -202,13 +202,21 @@ in a fixed catalog order. Enabling a plugin appends its section to the bottom of
 the sample email; disabling removes it. Re-enabling appends again, without restoring
 an old position. Filters never hide or reorder enabled preview sections.
 
-Reorder **inside the sample email**, using each section's dotted drag handle.
-Mouse, pen, and touch are supported; hold near the preview's top/bottom edge to
-auto-scroll. A compact label and insertion marker show the pending move. The order
-changes only on a valid drop. Escape, dropping outside, cancelled gestures, and
-loss of focus cancel the move. Selection changes, Clear, and Reset safely cancel
-any pending drag too. Keyboard users can focus a preview handle and use arrow keys;
+Reorder **inside the sample email**, using each section's enlarged dotted handle.
+Mouse, pen, and touch are supported. As you move a section, it collapses into a
+highlighted insertion gap and neighboring sections shift to preview the new order;
+a compact label follows the pointer. Drop targets use section-heading boundaries,
+so tall sections are easier to move past. The order changes only on a valid drop.
+Hold near either preview edge to auto-scroll; scrolling accelerates toward the edge
+and continues while the pointer is still. Escape, dropping outside, cancelled
+gestures, and loss of focus cancel the move. Selection changes, Clear, and Reset
+safely cancel any pending drag too. After a successful drop, the moved section is
+brought into view. Keyboard users can focus a preview handle and use arrow keys;
 there are no up/down buttons. AI's internal sections move together as one plugin.
+
+Library rows can be selected by clicking anywhere in the row, not just the checkbox.
+Toggling adds/removes only the changed preview section; existing sections are kept
+in place and the reader's visible section stays anchored.
 
 One ordered list of enabled IDs drives both checkbox state and the preview.
 Reset restores the original five-plugin sample; Clear selection empties it.
@@ -236,9 +244,12 @@ NODE_PATH=/tmp/email-brief-browser-tests/node_modules node tests/browser_plugin_
 
 Alternatively set `CHROME_PATH` to a locally installed Chrome executable. The
 browser checks cover preview-only keyboard/mouse/touch ordering, fixed library
-order, append/re-enable behavior, drop commit/cancellation, stationary edge scrolling,
-selection changes during dragging, filtering, empty/reset states, mobile overflow,
-no-JS fallback, and absence of external requests. Screenshots are
+order, append/re-enable behavior, first/last drops across the full catalog, live gap
+feedback, direction reversal, drop commit/cancellation, drag thresholds, stationary
+and early edge scrolling, side drift, partially visible previews, selection changes
+during dragging, unaffected-node and scroll-anchor preservation, row-wide selection,
+filtering, empty/reset states, mobile overflow, no-JS fallback, and absence of
+external requests. Screenshots are
 written to `/tmp/email-brief-builder-{desktop,mobile}.png`, not the repository.
 The Python suite checks catalog IDs against automatic plugin discovery: update the
 sample catalog and static page copy when adding or removing a plugin.

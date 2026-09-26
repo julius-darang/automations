@@ -56,7 +56,7 @@ const { chromium } = require('playwright');
     await page.mouse.move(point.x, point.y, { steps: 10 });
   }
   async function assertDragClean(page) {
-    assert.equal(await page.locator('.demo-drag-label, .is-picked, .drop-before, .drop-after, .is-dragging').count(), 0);
+    assert.equal(await page.locator('.demo-drag-label, .is-picked, .is-drag-placeholder, .demo-drop-placeholder, .drop-before, .drop-after, .is-dragging').count(), 0);
   }
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -70,10 +70,13 @@ const { chromium } = require('playwright');
     assert.deepEqual(await selected(page), defaults);
     assert.equal(await page.locator('[data-plugin="ai_pricing"] h5').count(), 3);
     assert.equal(await page.locator('[data-plugin="ai_pricing"] .drag-handle').count(), 1);
+    const gripBox = await handle(page, 'weather').boundingBox();
+    assert.ok(gripBox.width >= 48 && gripBox.height >= 48, `drag handle target too small: ${JSON.stringify(gripBox)}`);
 
     // Selection is the ordered preview, not a hidden catalog-order slot.
     await toggle(page, 'weather').uncheck();
-    await toggle(page, 'recipe').check();
+    await page.locator('[data-id="recipe"] .plugin-info p').click();
+    assert.equal(await toggle(page, 'recipe').isChecked(), true, 'Clicking a row description should select it');
     await toggle(page, 'weather').check();
     assert.deepEqual(await selected(page), ['quote', 'headlines', 'ai_pricing', 'crypto', 'recipe', 'weather']);
     assert.equal(await page.locator(':focus').getAttribute('aria-label'), 'Enable Weather in demo');
@@ -91,12 +94,22 @@ const { chromium } = require('playwright');
     assert.deepEqual(await selected(page), defaults);
     assert.deepEqual(await library(page), originalLibrary);
 
-    // An in-progress drag is visual feedback only; commit order on drop.
+    // Small pointer jitter and ordinary clicks never activate a drag.
+    const jitterStart = await sourcePoint(page, 'weather');
+    await page.mouse.move(jitterStart.x, jitterStart.y);
+    await page.mouse.down();
+    await page.mouse.move(jitterStart.x + 2, jitterStart.y + 1);
+    assert.equal(await page.locator('.demo-drop-placeholder, .is-dragging').count(), 0);
+    await page.mouse.up();
+    assert.deepEqual(await selected(page), defaults);
+
+    // The compact source gap moves live; persisted order changes only on drop.
     await startDrag(page, 'weather');
     await aim(page, 'quote', true);
-    assert.deepEqual(await selected(page), defaults);
-    assert.equal(await page.locator('.demo-drag-label').textContent(), 'Weather');
-    assert.equal(await page.locator('.drop-before, .drop-after').count(), 1);
+    assert.deepEqual(await selected(page), ['quote', 'weather', 'headlines', 'ai_pricing', 'crypto']);
+    assert.equal(await page.locator('.demo-drag-label').textContent(), 'Moving Weather');
+    assert.equal(await page.locator('.demo-drop-placeholder').count(), 1);
+    assert.equal(await page.locator('[data-plugin="weather"] h4').count(), 0, 'Long content collapses while dragging');
     await page.mouse.up();
     assert.deepEqual(await selected(page), ['quote', 'weather', 'headlines', 'ai_pricing', 'crypto']);
     assert.equal(await page.locator(':focus').getAttribute('aria-label'), 'Reorder Weather');
@@ -104,9 +117,11 @@ const { chromium } = require('playwright');
     assert.deepEqual(new Set(await checked(page)), new Set(defaults));
     await assertDragClean(page);
 
-    // Long composite content moves as a whole, then last-to-first insertion.
+    // Long composite content collapses to a gap and restores after the drop.
     await startDrag(page, 'ai_pricing');
     await aim(page, 'weather', false);
+    assert.deepEqual(await selected(page), ['quote', 'ai_pricing', 'weather', 'headlines', 'crypto']);
+    assert.equal(await page.locator('[data-plugin="ai_pricing"] h5').count(), 0, 'The source is compact during the drag');
     await page.mouse.up();
     assert.deepEqual(await selected(page), ['quote', 'ai_pricing', 'weather', 'headlines', 'crypto']);
     assert.equal(await page.locator('[data-plugin="ai_pricing"] h5').count(), 3);
@@ -125,8 +140,8 @@ const { chromium } = require('playwright');
       await aim(page, 'quote', true);
       if (reason === 'escape') await page.keyboard.press('Escape');
       if (reason === 'outside') await page.mouse.move(10, 10, { steps: 5 });
-      if (reason === 'cancel') await handle(page, 'weather').dispatchEvent('pointercancel', { pointerId: 1 });
-      if (reason === 'lost-capture') await handle(page, 'weather').evaluate(node => node.releasePointerCapture(1));
+      if (reason === 'cancel') await page.locator('#demo-sections').dispatchEvent('pointercancel', { pointerId: 1 });
+      if (reason === 'lost-capture') await page.locator('#demo-sections').evaluate(node => node.releasePointerCapture(1));
       if (reason === 'blur') await page.evaluate(() => window.dispatchEvent(new Event('blur')));
       await page.mouse.up();
       assert.deepEqual(await selected(page), defaults, reason);
@@ -151,6 +166,50 @@ const { chromium } = require('playwright');
       await assertDragClean(page);
     }
     assert.deepEqual(await selected(page), defaults);
+
+    // Auto-scroll begins before the extreme edge and keeps working while still.
+    await startDrag(page, 'weather');
+    const nearEdge = await page.locator('#demo-sections').evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      return { x: rect.right - 8, y: Math.min(innerHeight, rect.bottom) - 40, top: node.scrollTop };
+    });
+    await page.mouse.move(nearEdge.x, nearEdge.y, { steps: 6 });
+    await page.waitForFunction(start => document.querySelector('#demo-sections').scrollTop > start + 8, nearEdge.top, { timeout: 3000 });
+    await page.keyboard.press('Escape');
+    await page.mouse.up();
+    assert.deepEqual(await selected(page), defaults);
+    await assertDragClean(page);
+
+    // Sideways drift still scrolls; releasing outside the preview cancels.
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await startDrag(page, 'weather');
+    const sideEdge = await page.locator('#demo-sections').evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      return { x: rect.right + 20, y: Math.min(innerHeight, rect.bottom) - 8, top: node.scrollTop };
+    });
+    assert.ok(sideEdge.x < 1600, 'Test point remains inside the viewport, outside the preview');
+    await page.mouse.move(sideEdge.x, sideEdge.y, { steps: 6 });
+    await page.waitForFunction(start => document.querySelector('#demo-sections').scrollTop > start + 8, sideEdge.top, { timeout: 3000 });
+    await page.mouse.up();
+    assert.deepEqual(await selected(page), defaults, 'Outside drop cancels after tolerated sideways auto-scroll');
+    await assertDragClean(page);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+
+    // A preview clipped by the viewport still uses its visible edge for scrolling.
+    await page.setViewportSize({ width: 1440, height: 700 });
+    await startDrag(page, 'weather');
+    const clipped = await page.locator('#demo-sections').evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      return { clipped: rect.bottom > innerHeight, x: rect.left + rect.width / 2,
+        y: Math.min(innerHeight, rect.bottom) - 8, top: node.scrollTop };
+    });
+    assert.equal(clipped.clipped, true, 'The preview body should be partially below the viewport');
+    await page.mouse.move(clipped.x, clipped.y, { steps: 6 });
+    await page.waitForFunction(start => document.querySelector('#demo-sections').scrollTop > start + 8, clipped.top, { timeout: 3000 });
+    await page.keyboard.press('Escape');
+    await page.mouse.up();
+    assert.deepEqual(await selected(page), defaults);
+    await page.setViewportSize({ width: 1440, height: 1000 });
 
     // Selection changes and reset/clear during a drag cannot resurrect stale IDs.
     for (const action of ['disable', 'clear', 'reset']) {
@@ -211,6 +270,51 @@ const { chromium } = require('playwright');
     assert.equal((await selected(page)).length, 30);
     assert.equal(new Set(await selected(page)).size, 30);
     assert.equal(await page.locator('#demo-sections .drag-handle').count(), 30);
+
+    // Real pointer paths from first-to-last and last-to-first with the full catalog.
+    await startDrag(page, 'weather');
+    await aim(page, 'cocktail', true);
+    assert.equal((await selected(page)).at(-1), 'weather');
+    await page.mouse.up();
+    assert.equal((await selected(page)).at(-1), 'weather');
+    await startDrag(page, 'weather');
+    await aim(page, 'quote', false);
+    assert.equal((await selected(page))[0], 'weather');
+    await page.mouse.up();
+    assert.equal((await selected(page))[0], 'weather');
+
+    // Reverse direction mid-drag; the insertion gap tracks without oscillating.
+    await startDrag(page, 'weather');
+    await aim(page, 'air_quality', true);
+    assert.equal((await selected(page)).indexOf('weather'), (await selected(page)).indexOf('air_quality') + 1);
+    await aim(page, 'quote', false);
+    assert.equal((await selected(page))[0], 'weather');
+    await page.mouse.up();
+    assert.equal((await selected(page))[0], 'weather');
+
+    // Toggles preserve unaffected DOM nodes and keep the reader's visible anchor.
+    const anchorBefore = await page.evaluate(() => {
+      const preview = document.querySelector('#demo-sections');
+      preview.scrollTop = Math.min(500, preview.scrollHeight / 2);
+      const bounds = preview.getBoundingClientRect();
+      const section = [...preview.querySelectorAll('.demo-email-section')].find(node => {
+        const rect = node.getBoundingClientRect();
+        return rect.bottom > bounds.top && rect.top < bounds.bottom && node.dataset.plugin !== 'weather';
+      });
+      window.savedPreviewNode = section;
+      return { id: section.dataset.plugin, offset: section.getBoundingClientRect().top - bounds.top };
+    });
+    await toggle(page, 'weather').uncheck();
+    let anchorAfter = await page.evaluate(() => {
+      const preview = document.querySelector('#demo-sections');
+      const node = document.querySelector(`[data-plugin="${window.savedPreviewNode.dataset.plugin}"]`);
+      return { sameNode: node === window.savedPreviewNode, offset: node.getBoundingClientRect().top - preview.getBoundingClientRect().top };
+    });
+    assert.equal(anchorAfter.sameNode, true);
+    assert.ok(Math.abs(anchorAfter.offset - anchorBefore.offset) < 2, `visible section jumped: ${anchorBefore.offset} -> ${anchorAfter.offset}`);
+    await toggle(page, 'weather').check();
+    assert.equal((await selected(page)).at(-1), 'weather', 'Re-enabled plugin appends after full-catalog reorder');
+    assert.equal(await page.locator(`[data-plugin="${anchorBefore.id}"]`).evaluate(node => node === window.savedPreviewNode), true);
     await page.reload();
     assert.deepEqual(await selected(page), defaults);
     await page.locator('#plugin-builder').screenshot({ path: '/tmp/email-brief-builder-desktop.png' });
@@ -224,6 +328,11 @@ const { chromium } = require('playwright');
     assert.equal((await selected(phone)).at(-1), 'recipe');
     await phone.locator('#demo-reset').tap();
     const session = await mobile.newCDPSession(phone);
+    const tapPoint = await sourcePoint(phone, 'weather');
+    await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [tapPoint] });
+    await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    assert.deepEqual(await selected(phone), defaults, 'A touch tap must not accidentally drag');
+    assert.equal(await phone.locator('.demo-drop-placeholder').count(), 0);
     const from = await sourcePoint(phone, 'weather');
     await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });
     const to = await targetPoint(phone, 'quote', true);
@@ -231,7 +340,8 @@ const { chromium } = require('playwright');
       const point = { x: from.x + (to.x - from.x) * step / 8, y: from.y + (to.y - from.y) * step / 8 };
       await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [point] });
     }
-    assert.deepEqual(await selected(phone), defaults);
+    assert.deepEqual(await selected(phone), ['quote', 'weather', 'headlines', 'ai_pricing', 'crypto']);
+    assert.equal(await phone.locator('.demo-drop-placeholder').count(), 1);
     await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     assert.deepEqual(await selected(phone), ['quote', 'weather', 'headlines', 'ai_pricing', 'crypto']);
     assert.deepEqual(await library(phone), originalLibrary);
